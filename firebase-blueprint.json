@@ -1,0 +1,104 @@
+{
+  "entities": {
+    "Category": {
+      "title": "Category",
+      "description": "Category for courses",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "icon": { "type": "string" },
+        "color": { "type": "string" },
+        "order": { "type": "number" }
+      },
+      "required": ["title", "description"]
+    },
+    "Course": {
+      "title": "Course",
+      "description": "A course entity",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "instructor": { "type": "string" },
+        "price": { "type": "number" },
+        "rating": { "type": "number" },
+        "lessons": { "type": "number" },
+        "image": { "type": "string" }
+      },
+      "required": ["title", "description", "category", "instructor", "price"]
+    },
+    "Article": {
+      "title": "Article",
+      "description": "An article / blog post",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "content": { "type": "string" },
+        "category": { "type": "string" },
+        "image": { "type": "string" }
+      },
+      "required": ["title", "description", "content", "category"]
+    },
+    "User": {
+      "title": "User",
+      "description": "User profile",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" }
+      },
+      "required": ["userId", "email"]
+    },
+    "SavedArticle": {
+      "title": "SavedArticle",
+      "description": "A bookmarked article by user",
+      "type": "object",
+      "properties": {
+        "articleId": { "type": "string" },
+        "savedAt": { "type": "number" }
+      },
+      "required": ["articleId", "savedAt"]
+    },
+    "CourseProgress": {
+      "title": "CourseProgress",
+      "description": "Progress of a user in a course",
+      "type": "object",
+      "properties": {
+        "courseId": { "type": "string" },
+        "progress": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["courseId", "progress", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/categories/{categoryId}": {
+      "schema": { "$ref": "#/entities/Category" },
+      "description": "Categories for courses"
+    },
+    "/courses/{courseId}": {
+      "schema": { "$ref": "#/entities/Course" },
+      "description": "Course information"
+    },
+    "/articles/{articleId}": {
+      "schema": { "$ref": "#/entities/Article" },
+      "description": "Articles / blog posts"
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles"
+    },
+    "/users/{userId}/savedArticles/{articleId}": {
+      "schema": { "$ref": "#/entities/SavedArticle" },
+      "description": "User saved articles"
+    },
+    "/users/{userId}/courseProgress/{courseId}": {
+      "schema": { "$ref": "#/entities/CourseProgress" },
+      "description": "User course progress"
+    }
+  }
+}

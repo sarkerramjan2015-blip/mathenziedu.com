@@ -1,0 +1,119 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() { return request.auth != null; }
+    function isAdmin() { return isSignedIn() && request.auth.token.email in ['sarkerramjan2015@gmail.com']; }
+    function isOwner(uid) { return isSignedIn() && request.auth.uid == uid; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    function isValidCategory(data) {
+      return data.keys().hasAll(['title', 'description'])
+        && data.title is string && data.title.size() <= 100
+        && data.description is string && data.description.size() <= 1000
+        && data.get('icon', '') is string && data.get('icon', '').size() <= 50
+        && data.get('color', '') is string && data.get('color', '').size() <= 20
+        && data.get('order', 0) is number;
+    }
+
+    function isValidCourse(data) {
+      return data.keys().hasAll(['title', 'description', 'category', 'instructor', 'price'])
+        && data.title is string && data.title.size() <= 200
+        && data.description is string && data.description.size() <= 5000
+        && data.category is string && data.category.size() <= 100
+        && data.instructor is string && data.instructor.size() <= 100
+        && data.price is number
+        && data.get('rating', 0) is number
+        && data.get('lessons', 0) is number
+        && data.get('duration', '') is string && data.get('duration', '').size() <= 50
+        && data.get('level', '') is string && data.get('level', '').size() <= 50
+        && data.get('enrolled', 0) is number
+        && data.get('outcomes', []) is list
+        && data.get('curriculum', []) is list
+        && data.get('image', '') is string && data.get('image', '').size() <= 1000;
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['userId', 'email'])
+        && data.userId is string && data.userId.size() <= 128
+        && data.userId == request.auth.uid
+        && data.email is string && data.email.size() <= 100
+        && data.get('displayName', '') is string && data.get('displayName', '').size() <= 100
+        && data.get('role', '') is string && data.get('role', '').size() <= 50;
+    }
+
+    function isValidArticle(data) {
+      return data.keys().hasAll(['title', 'description', 'content', 'category'])
+        && data.title is string && data.title.size() <= 200
+        && data.description is string && data.description.size() <= 1000
+        && data.content is string && data.content.size() <= 100000
+        && data.category is string && data.category.size() <= 100
+        && data.get('image', '') is string && data.get('image', '').size() <= 1000;
+    }
+
+    function isValidSavedArticle(data) {
+      return data.keys().hasAll(['articleId', 'savedAt'])
+        && data.articleId is string && data.articleId.size() <= 128
+        && data.savedAt is number;
+    }
+
+    function isValidCourseProgress(data) {
+      return data.keys().hasAll(['courseId', 'progress', 'updatedAt'])
+        && data.courseId is string && data.courseId.size() <= 128
+        && data.progress is number
+        && data.updatedAt is number;
+    }
+
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(categoryId) && isValidCategory(incoming()) && incoming().keys().size() <= 5;
+      allow update: if isAdmin() && isValidId(categoryId) && isValidCategory(incoming());
+      allow delete: if isAdmin() && isValidId(categoryId);
+      allow list: if true;
+    }
+
+    match /courses/{courseId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(courseId) && isValidCourse(incoming()) && incoming().keys().size() <= 13;
+      allow update: if isAdmin() && isValidId(courseId) && isValidCourse(incoming());
+      allow delete: if isAdmin() && isValidId(courseId);
+      allow list: if true;
+    }
+
+    match /articles/{articleId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(articleId) && isValidArticle(incoming()) && incoming().keys().size() <= 5;
+      allow update: if isAdmin() && isValidId(articleId) && isValidArticle(incoming());
+      allow delete: if isAdmin() && isValidId(articleId);
+      allow list: if true;
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUser(incoming()) && incoming().keys().size() <= 4;
+      allow update: if isOwner(userId) && isValidId(userId) && isValidUser(incoming()) && incoming().diff(existing()).affectedKeys().hasOnly(['displayName']);
+      allow delete: if isOwner(userId) && isValidId(userId);
+      allow list: if isAdmin();
+      
+      match /savedArticles/{articleId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(articleId) && isValidSavedArticle(incoming()) && incoming().keys().size() <= 2;
+        allow delete: if isOwner(userId) && isValidId(articleId);
+        allow list: if isOwner(userId);
+      }
+
+      match /courseProgress/{courseId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(courseId) && isValidCourseProgress(incoming()) && incoming().keys().size() <= 3;
+        allow update: if isOwner(userId) && isValidId(courseId) && isValidCourseProgress(incoming()) && incoming().diff(existing()).affectedKeys().hasOnly(['progress', 'updatedAt']);
+        allow list: if isOwner(userId);
+      }
+    }
+  }
+}
