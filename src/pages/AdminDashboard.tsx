@@ -1,29 +1,125 @@
-import React, { useState } from 'react';
-import { Users, BookOpen, Settings, LayoutDashboard, DollarSign, Calendar, LogOut, ChevronRight, Search, Filter, FileText } from 'lucide-react';
-import { adminStats, exams, courses } from '../lib/data';
+import React, { useState, useEffect } from 'react';
+import { Users, BookOpen, Settings, LayoutDashboard, DollarSign, Calendar, LogOut, ChevronRight, Search, Filter, FileText, BookMarked, CreditCard, ClipboardList, HelpCircle, CheckSquare, Award, Mail, Shield, UserCheck, Eye } from 'lucide-react';
+import { adminStats, exams, courses as defaultCourses } from '../lib/data';
 import AdminArticles from '../components/admin/AdminArticles';
 import AdminCategories from '../components/admin/AdminCategories';
 import AdminCourses from '../components/admin/AdminCourses';
+import AdminBooks from '../components/admin/AdminBooks';
+import AdminEnrollments from '../components/admin/AdminEnrollments';
+import AdminExamQuestions from '../components/admin/AdminExamQuestions';
+import AdminExamEvaluation from '../components/admin/AdminExamEvaluation';
+import AdminCertificates from '../components/admin/AdminCertificates';
+import AdminContactMessages from '../components/admin/AdminContactMessages';
+import AdminSiteSettings from '../components/admin/AdminSiteSettings';
 import { auth } from '../lib/firebase';
 import { useNavigate } from 'react-router-dom';
 import { formatCurrency } from '../lib/media';
+import { L } from '../lib/i18n';
+import { DEMO_MODE, clearDemoSession } from '../lib/demo';
+import { useAuth } from '../lib/AuthContext';
+import { collection, getDocs, query, orderBy, where } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import type { AdminAnalyticsSummary, Enrollment, Order, PaymentSubmission, ExamAttempt, WrittenSubmission, Certificate, Course } from '../lib/types';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const navigate = useNavigate();
+  const { isDemo } = useAuth();
+  const [analytics, setAnalytics] = useState<AdminAnalyticsSummary>({
+    totalUsers: 0, totalEnrollments: 0, activeEnrollments: 0,
+    pendingOrders: 0, paidOrders: 0, totalRevenue: 0,
+    totalCourses: 0, totalBooks: 0, totalExams: 0,
+    totalExamAttempts: 0, averageExamScore: 0,
+    pendingWrittenEvaluations: 0, certificatesIssued: 0,
+  });
+  const [analyticsLoading, setAnalyticsLoading] = useState(true);
 
   const handleLogout = async () => {
+    if (isDemo) {
+      clearDemoSession();
+      navigate('/login');
+      return;
+    }
     await auth.signOut();
     navigate('/');
   };
 
+  // Fetch real analytics
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      setAnalyticsLoading(true);
+      try {
+        const [
+          usersSnap, enrollSnap, ordersSnap, subsSnap,
+          coursesSnap, booksSnap, examsSnap,
+          attSnap, wrSnap, certSnap, contactSnap
+        ] = await Promise.all([
+          getDocs(collection(db, 'users')),
+          getDocs(collection(db, 'enrollments')),
+          getDocs(collection(db, 'orders')),
+          getDocs(collection(db, 'paymentSubmissions')),
+          getDocs(collection(db, 'courses')),
+          getDocs(collection(db, 'books')),
+          getDocs(collection(db, 'exams')),
+          getDocs(collection(db, 'examAttempts')),
+          getDocs(collection(db, 'writtenSubmissions')),
+          getDocs(collection(db, 'certificates')),
+          getDocs(collection(db, 'contactMessages')),
+        ]);
+
+        const allOrders = ordersSnap.docs.map(d => d.data() as Order);
+        const allAttempts = attSnap.docs.map(d => d.data() as ExamAttempt);
+        const allEnrollments = enrollSnap.docs.map(d => d.data() as Enrollment);
+        const paidOrders = allOrders.filter(o => o.status === 'paid');
+        const verifiedSubs = subsSnap.docs.filter(d => d.data().status === 'verified');
+
+        // Calculate real revenue from bKash verified submissions
+        const totalRevenue = verifiedSubs.reduce((sum, d) => sum + (d.data().amount || 0), 0);
+
+        // Calculate average exam score
+        const evaluatedAttempts = allAttempts.filter(a => a.status === 'evaluated' && a.obtainedMarks !== undefined);
+        const avgScore = evaluatedAttempts.length > 0
+          ? Math.round(evaluatedAttempts.reduce((sum, a) => sum + (a.obtainedMarks || 0), 0) / evaluatedAttempts.length)
+          : 0;
+
+        const pendingWritten = wrSnap.docs.filter(d => d.data().status === 'submitted').length;
+        const issuedCerts = certSnap.docs.filter(d => d.data().status === 'issued').length;
+
+        setAnalytics({
+          totalUsers: usersSnap.size,
+          totalEnrollments: enrollSnap.size,
+          activeEnrollments: allEnrollments.filter(e => e.status === 'active').length,
+          pendingOrders: allOrders.filter(o => o.status === 'pending').length,
+          paidOrders: paidOrders.length,
+          totalRevenue,
+          totalCourses: coursesSnap.size,
+          totalBooks: booksSnap.size,
+          totalExams: examsSnap.size,
+          totalExamAttempts: attSnap.size,
+          averageExamScore: avgScore,
+          pendingWrittenEvaluations: pendingWritten,
+          certificatesIssued: issuedCerts,
+        });
+      } catch (e) { console.error(e); }
+      finally { setAnalyticsLoading(false); }
+    };
+    fetchAnalytics();
+  }, []);
+
   const menu = [
-    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-    { id: 'categories', label: 'Manage Categories', icon: Filter },
-    { id: 'courses', label: 'Manage Courses', icon: BookOpen },
-    { id: 'articles', label: 'Manage Articles', icon: FileText },
-    { id: 'students', label: 'Manage Students', icon: Users },
-    { id: 'settings', label: 'Site Settings', icon: Settings },
+    { id: 'overview', label: L.overview, icon: LayoutDashboard },
+    { id: 'enrollments', label: L.enrollments, icon: ClipboardList },
+    { id: 'orders', label: L.orders, icon: CreditCard },
+    { id: 'categories', label: L.categories, icon: Filter },
+    { id: 'courses', label: L.courses, icon: BookOpen },
+    { id: 'books', label: L.books, icon: BookMarked },
+    { id: 'articles', label: L.articles, icon: FileText },
+    { id: 'exam_questions', label: L.examQuestions, icon: HelpCircle },
+    { id: 'exam_evaluation', label: L.examEvaluation, icon: CheckSquare },
+    { id: 'certificates', label: L.certificates, icon: Award },
+    { id: 'contact_messages', label: L.messages, icon: Mail },
+    { id: 'students', label: L.students, icon: Users },
+    { id: 'settings', label: L.settings, icon: Settings },
   ];
 
   return (
@@ -64,13 +160,19 @@ export default function AdminDashboard() {
 
           <div className="mt-auto border-t border-white/10 pt-6">
             <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-400 hover:bg-red-500/10 hover:border-red-500/20 border border-transparent transition-all">
-              <LogOut className="h-5 w-5" /> Logout
+              <LogOut className="h-5 w-5" /> {isDemo ? 'Exit Demo' : 'Logout'}
             </button>
           </div>
         </div>
 
         {/* Main Content */}
         <div className="flex-grow p-6 md:p-10 w-full relative z-10">
+          {DEMO_MODE && isDemo && (
+            <div className="mb-6 rounded-xl bg-purple-500/10 border border-purple-500/30 px-5 py-3 text-sm text-purple-300 flex items-center gap-2">
+              <Eye className="h-4 w-4 shrink-0" />
+              <span><strong>Demo Mode Active</strong> — changes may be saved to localStorage only. Firestore writes may be blocked.</span>
+            </div>
+          )}
           <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-10 gap-6">
             <div>
               <h1 className="text-3xl font-display font-bold text-white mb-2">
@@ -110,22 +212,50 @@ export default function AdminDashboard() {
                 </button>
               ))}
               <button onClick={handleLogout} className="flex items-center gap-2 rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-2 text-sm font-bold text-red-300">
-                <LogOut className="h-4 w-4" /> Logout
+                <LogOut className="h-4 w-4" /> {isDemo ? 'Exit Demo' : 'Logout'}
               </button>
             </div>
           </div>
 
           {activeTab === 'overview' && (
             <>
+              {/* Quick Actions */}
+              <div className="mb-10">
+                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3">{L.quickActions}</h3>
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={() => setActiveTab('courses')} className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-slate-300 text-xs font-bold hover:bg-white/10 hover:text-white transition-all">
+                    + {L.addCourse}
+                  </button>
+                  <button onClick={() => setActiveTab('books')} className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-slate-300 text-xs font-bold hover:bg-white/10 hover:text-white transition-all">
+                    + {L.addBook}
+                  </button>
+                  <button onClick={() => setActiveTab('articles')} className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-slate-300 text-xs font-bold hover:bg-white/10 hover:text-white transition-all">
+                    + {L.addArticle}
+                  </button>
+                  <button onClick={() => setActiveTab('enrollments')} className="px-4 py-2 rounded-xl bg-[#E2136E]/20 border border-[#E2136E]/30 text-[#E2136E] text-xs font-bold hover:bg-[#E2136E]/30 transition-all">
+                    {L.paymentVerification}
+                  </button>
+                  <button onClick={() => setActiveTab('contact_messages')} className="px-4 py-2 rounded-xl bg-[#2563EB]/20 border border-[#2563EB]/30 text-blue-300 text-xs font-bold hover:bg-[#2563EB]/30 transition-all">
+                    {L.messages}
+                  </button>
+                  <button onClick={() => setActiveTab('certificates')} className="px-4 py-2 rounded-xl bg-[#F59E0B]/20 border border-[#F59E0B]/30 text-[#F59E0B] text-xs font-bold hover:bg-[#F59E0B]/30 transition-all">
+                    {L.certificates}
+                  </button>
+                </div>
+              </div>
+
               {/* Stats Grid */}
+              {analyticsLoading ? (
+                <div className="flex justify-center py-12"><div className="w-10 h-10 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin" /></div>
+              ) : (<>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
                 <div className="bg-white/5 backdrop-blur-md rounded-3xl p-6 border border-white/10 shadow-xl flex items-center gap-4">
                   <div className="h-14 w-14 rounded-2xl bg-[#2563EB]/20 text-[#2563EB] border border-[#2563EB]/30 flex items-center justify-center shrink-0">
                     <Users className="h-6 w-6" />
                   </div>
                   <div>
-                    <div className="text-xs font-bold text-slate-400 mb-1 uppercase tracking-wider">Total Students</div>
-                    <div className="text-2xl font-bold text-white">{adminStats.totalStudents.toLocaleString()}</div>
+                    <div className="text-xs font-bold text-slate-400 mb-1 uppercase tracking-wider">Total Users</div>
+                    <div className="text-2xl font-bold text-white">{analytics.totalUsers.toLocaleString()}</div>
                   </div>
                 </div>
                 <div className="bg-white/5 backdrop-blur-md rounded-3xl p-6 border border-white/10 shadow-xl flex items-center gap-4">
@@ -133,8 +263,9 @@ export default function AdminDashboard() {
                     <DollarSign className="h-6 w-6" />
                   </div>
                   <div>
-                    <div className="text-xs font-bold text-slate-400 mb-1 uppercase tracking-wider">Total Revenue</div>
-                    <div className="text-2xl font-bold text-white">{adminStats.totalRevenue}</div>
+                    <div className="text-xs font-bold text-slate-400 mb-1 uppercase tracking-wider">Revenue (bKash Verified)</div>
+                    <div className="text-2xl font-bold text-white">{formatCurrency(analytics.totalRevenue)}</div>
+                    <div className="text-[10px] text-slate-500">{analytics.paidOrders} paid orders</div>
                   </div>
                 </div>
                 <div className="bg-white/5 backdrop-blur-md rounded-3xl p-6 border border-white/10 shadow-xl flex items-center gap-4">
@@ -142,8 +273,9 @@ export default function AdminDashboard() {
                     <BookOpen className="h-6 w-6" />
                   </div>
                   <div>
-                    <div className="text-xs font-bold text-slate-400 mb-1 uppercase tracking-wider">Active Courses</div>
-                    <div className="text-2xl font-bold text-white">{adminStats.activeCourses}</div>
+                    <div className="text-xs font-bold text-slate-400 mb-1 uppercase tracking-wider">Enrollments</div>
+                    <div className="text-2xl font-bold text-white">{analytics.totalEnrollments}</div>
+                    <div className="text-[10px] text-slate-500">{analytics.activeEnrollments} active</div>
                   </div>
                 </div>
                 <div className="bg-white/5 backdrop-blur-md rounded-3xl p-6 border border-white/10 shadow-xl flex items-center gap-4">
@@ -151,11 +283,75 @@ export default function AdminDashboard() {
                     <Calendar className="h-6 w-6" />
                   </div>
                   <div>
-                    <div className="text-xs font-bold text-slate-400 mb-1 uppercase tracking-wider">Upcoming Exams</div>
-                    <div className="text-2xl font-bold text-white">{adminStats.upcomingExams}</div>
+                    <div className="text-xs font-bold text-slate-400 mb-1 uppercase tracking-wider">Pending Orders</div>
+                    <div className="text-2xl font-bold text-white">{analytics.pendingOrders}</div>
                   </div>
                 </div>
               </div>
+
+              {/* Row 2 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+                <div className="bg-white/5 backdrop-blur-md rounded-3xl p-6 border border-white/10 shadow-xl flex items-center gap-4">
+                  <div className="h-14 w-14 rounded-2xl bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center justify-center shrink-0">
+                    <BookOpen className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-slate-400 mb-1 uppercase tracking-wider">Courses</div>
+                    <div className="text-2xl font-bold text-white">{analytics.totalCourses}</div>
+                  </div>
+                </div>
+                <div className="bg-white/5 backdrop-blur-md rounded-3xl p-6 border border-white/10 shadow-xl flex items-center gap-4">
+                  <div className="h-14 w-14 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                    <BookOpen className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-slate-400 mb-1 uppercase tracking-wider">Books</div>
+                    <div className="text-2xl font-bold text-white">{analytics.totalBooks}</div>
+                  </div>
+                </div>
+                <div className="bg-white/5 backdrop-blur-md rounded-3xl p-6 border border-white/10 shadow-xl flex items-center gap-4">
+                  <div className="h-14 w-14 rounded-2xl bg-purple-500/20 text-purple-400 border border-purple-500/30 flex items-center justify-center shrink-0">
+                    <FileText className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-slate-400 mb-1 uppercase tracking-wider">Exams</div>
+                    <div className="text-2xl font-bold text-white">{analytics.totalExams}</div>
+                  </div>
+                </div>
+                <div className="bg-white/5 backdrop-blur-md rounded-3xl p-6 border border-white/10 shadow-xl flex items-center gap-4">
+                  <div className="h-14 w-14 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center shrink-0">
+                    <Users className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-slate-400 mb-1 uppercase tracking-wider">Exam Attempts</div>
+                    <div className="text-2xl font-bold text-white">{analytics.totalExamAttempts}</div>
+                    <div className="text-[10px] text-slate-500">Avg score: {analytics.averageExamScore}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 3 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+                <div className="bg-white/5 backdrop-blur-md rounded-3xl p-6 border border-white/10 shadow-xl flex items-center gap-4">
+                  <div className="h-14 w-14 rounded-2xl bg-red-500/20 text-red-400 border border-red-500/30 flex items-center justify-center shrink-0">
+                    <FileText className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-slate-400 mb-1 uppercase tracking-wider">Pending Evaluations</div>
+                    <div className="text-2xl font-bold text-white">{analytics.pendingWrittenEvaluations}</div>
+                  </div>
+                </div>
+                <div className="bg-white/5 backdrop-blur-md rounded-3xl p-6 border border-white/10 shadow-xl flex items-center gap-4">
+                  <div className="h-14 w-14 rounded-2xl bg-[#F59E0B]/20 text-[#F59E0B] border border-[#F59E0B]/30 flex items-center justify-center shrink-0">
+                    <Award className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-slate-400 mb-1 uppercase tracking-wider">Certificates Issued</div>
+                    <div className="text-2xl font-bold text-white">{analytics.certificatesIssued}</div>
+                  </div>
+                </div>
+              </div>
+              </> )}
 
               {/* Data Tables */}
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
@@ -176,7 +372,7 @@ export default function AdminDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        {courses.slice(0, 4).map(course => (
+                        {defaultCourses.slice(0, 4).map(course => (
                           <tr key={course.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                             <td className="p-4">
                               <div className="font-medium text-white line-clamp-1">{course.title}</div>
@@ -233,19 +429,43 @@ export default function AdminDashboard() {
             </>
           )}
 
+          {activeTab === 'enrollments' && <AdminEnrollments />}
+          {activeTab === 'orders' && <AdminEnrollments />}
           {activeTab === 'categories' && <AdminCategories />}
           {activeTab === 'courses' && <AdminCourses />}
+          {activeTab === 'books' && <AdminBooks />}
           {activeTab === 'articles' && <AdminArticles />}
-
-          {activeTab !== 'overview' && activeTab !== 'categories' && activeTab !== 'courses' && activeTab !== 'articles' && (
-            <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-12 border border-white/10 text-center shadow-2xl">
-              <div className="h-24 w-24 bg-white/5 border border-white/10 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-500 shadow-inner">
-                <Settings className="h-10 w-10" />
+          {activeTab === 'exam_questions' && <AdminExamQuestions exams={exams} />}
+          {activeTab === 'exam_evaluation' && <AdminExamEvaluation exams={exams} />}
+          {activeTab === 'certificates' && <AdminCertificates exams={exams} />}
+          {activeTab === 'contact_messages' && <AdminContactMessages />}
+          {activeTab === 'students' && (
+            <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="h-14 w-14 rounded-2xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
+                  <Users className="h-6 w-6 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">Students Management</h3>
+                  <p className="text-sm text-slate-400">User accounts are automatically created when students register. To manage a user's role (student/admin), update the user document in Firestore: set <code className="text-[#F59E0B] bg-black/30 px-1.5 py-0.5 rounded text-xs">role: 'admin'</code></p>
+                </div>
               </div>
-              <h3 className="text-xl font-bold text-white mb-2">{menu.find(m => m.id === activeTab)?.label} Module</h3>
-              <p className="text-slate-400">This management module is functional in the full version.</p>
+              <div className="bg-black/30 rounded-2xl p-5 border border-white/10">
+                <h4 className="font-bold text-white mb-3">How to make a user Admin</h4>
+                <ol className="list-decimal list-inside space-y-2 text-sm text-slate-300">
+                  <li>Go to Firebase Console → Firestore Database</li>
+                  <li>Find the user document in <code className="text-[#F59E0B] bg-black/30 px-1 py-0.5 rounded text-xs">users/{'{userId}'}</code> collection</li>
+                  <li>Set <code className="text-[#10B981] bg-black/30 px-1 py-0.5 rounded text-xs">role: 'admin'</code> field</li>
+                  <li>User must sign out and sign in again for changes to take effect</li>
+                </ol>
+              </div>
+              <div className="mt-4 text-xs text-slate-500">
+                <p>Current firebase-applet-config.json determines the Firebase project connection.</p>
+                <p>All user data is stored in the Firestore <code className="text-[#F59E0B] bg-black/30 px-1 py-0.5 rounded text-xs">users</code> collection.</p>
+              </div>
             </div>
           )}
+          {activeTab === 'settings' && <AdminSiteSettings />}
         </div>
       </div>
     </div>

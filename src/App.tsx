@@ -21,6 +21,12 @@ const Legal = React.lazy(() => import('./pages/Legal'));
 const NotFound = React.lazy(() => import('./pages/NotFound'));
 
 const About = React.lazy(() => import('./pages/About'));
+const Admission = React.lazy(() => import('./pages/Admission'));
+const Books = React.lazy(() => import('./pages/Books'));
+const MathematicsNature = React.lazy(() => import('./pages/MathematicsNature'));
+const TakeExam = React.lazy(() => import('./pages/TakeExam'));
+const CertificateView = React.lazy(() => import('./pages/CertificateView'));
+const ForgotPassword = React.lazy(() => import('./pages/ForgotPassword'));
 
 const PageLoader = () => (
   <div className="min-h-[70vh] flex items-center justify-center">
@@ -54,13 +60,19 @@ export default function App() {
                   <Route path="/" element={<Home />} />
                   <Route path="/about" element={<About />} />
                   <Route path="/contact" element={<Contact />} />
+                  <Route path="/admission" element={<Admission />} />
+                  <Route path="/books" element={<Books />} />
+                  <Route path="/mathematics-and-nature" element={<MathematicsNature />} />
                   <Route path="/courses" element={<Courses />} />
                   <Route path="/courses/:id" element={<CourseDetails />} />
                   <Route path="/exams" element={<Exams />} />
                   <Route path="/exams/:id" element={<ExamDetails />} />
+                  <Route path="/exams/:id/take" element={<ProtectedRoute><TakeExam /></ProtectedRoute>} />
+                  <Route path="/certificates/:id" element={<ProtectedRoute><CertificateView /></ProtectedRoute>} />
                   <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route path="/articles" element={<Articles />} />
                   <Route path="/articles/:id" element={<ArticleDetails />} />
                   <Route path="/privacy" element={<Legal type="privacy" />} />

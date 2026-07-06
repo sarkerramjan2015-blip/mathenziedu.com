@@ -94,8 +94,15 @@ export default function ArticleDetails() {
           animate={{ opacity: 1, y: 0 }}
         >
           <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-sm font-semibold border border-blue-500/20">
-              <BookOpen className="h-4 w-4" /> {article.category || 'Article'}
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-sm font-semibold border border-blue-500/20">
+                <BookOpen className="h-4 w-4" /> {article.mainCategory || article.category || 'Article'}
+              </div>
+              {article.subCategory && (
+                <div className="inline-flex items-center px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-sm font-semibold border border-blue-500/20">
+                  {article.subCategory}
+                </div>
+              )}
             </div>
             
             <button 

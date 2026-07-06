@@ -1,17 +1,71 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { BookOpen, Menu, X, ChevronDown, User as UserIcon } from 'lucide-react';
+import { BookOpen, Menu, X, ChevronDown, User as UserIcon, LogOut, Eye } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { auth } from '../lib/firebase';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import { MAIN_CATEGORIES_DATA } from '../lib/data';
+import { DEMO_MODE, clearDemoSession } from '../lib/demo';
+import type { MainCategory, SubCategory } from '../lib/types';
+
+const CATEGORY_COLORS: Record<string, string> = {
+  'Academic Maths': 'text-[#F59E0B]',
+  'Olympiad': 'text-[#2563EB]',
+  'Admission Course': 'text-[#10B981]',
+  'Books Corner': 'text-purple-400',
+  'Mathematics and Nature': 'text-rose-400',
+};
+
+const linkMap: Record<string, string> = {
+  'Admission Course': '/admission',
+  'Books Corner': '/books',
+  'Mathematics and Nature': '/mathematics-and-nature',
+};
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, isDemo } = useAuth();
+  const [categories, setCategories] = useState<MainCategory[]>([]);
+  const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
+
+  useEffect(() => {
+    const fetchNavData = async () => {
+      try {
+        const [catSnap, subSnap] = await Promise.all([
+          getDocs(collection(db, 'categories')),
+          getDocs(collection(db, 'subcategories')),
+        ]);
+        if (!catSnap.empty) {
+          setCategories(catSnap.docs.map(d => ({ id: d.id, ...d.data() })) as MainCategory[]);
+        }
+        if (!subSnap.empty) {
+          setSubCategories(subSnap.docs.map(d => ({ id: d.id, ...d.data() })) as SubCategory[]);
+        }
+      } catch {}
+    };
+    fetchNavData();
+  }, []);
+
+  const displayCategories = categories.length > 0 ? categories : MAIN_CATEGORIES_DATA;
+  
+  const getSubsForMain = (mainTitle: string) => {
+    if (subCategories.length > 0) {
+      return subCategories.filter(s => s.parentMainCategory === mainTitle);
+    }
+    const found = MAIN_CATEGORIES_DATA.find(c => c.title === mainTitle);
+    return found ? found.subCategories.map((title, i) => ({ id: `sub-${i}`, title, parentMainCategory: mainTitle })) : [];
+  };
 
   const isActive = (path: string) => location.pathname === path;
 
   const handleLogout = async () => {
+    if (isDemo) {
+      clearDemoSession();
+      window.location.href = '/login';
+      return;
+    }
     try {
       await auth.signOut();
     } catch (e) {
@@ -20,7 +74,15 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="sticky top-0 z-50 w-full backdrop-blur-md bg-[#0F172A]/80 border-b border-white/10">
+    <>
+      {/* Demo Mode Banner */}
+      {DEMO_MODE && isDemo && (
+        <div className="sticky top-0 z-[60] w-full bg-purple-600/90 backdrop-blur-md text-white text-center py-1.5 px-4 text-xs font-bold flex items-center justify-center gap-2">
+          <Eye className="h-3.5 w-3.5" />
+          Demo Mode Active — Local Preview Only
+        </div>
+      )}
+      <nav className={`${DEMO_MODE && isDemo ? '' : 'sticky top-0'} z-50 w-full backdrop-blur-md bg-[#0F172A]/80 border-b border-white/10`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-20">
           <div className="flex items-center gap-3">
@@ -44,12 +106,26 @@ export default function Navbar() {
               <button className="flex items-center gap-1 font-medium text-slate-300 hover:text-white transition-colors">
                 Categories <ChevronDown className="h-4 w-4" />
               </button>
-              <div className="absolute top-full left-0 mt-2 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-                <div className="py-2 bg-[#0F172A] rounded-xl shadow-2xl border border-white/10 flex flex-col backdrop-blur-xl">
-                  <Link to="/courses?category=Academic+Maths" className="px-4 py-2 hover:bg-white/10 text-sm font-medium text-slate-300 hover:text-white">Academic Maths</Link>
-                  <Link to="/courses?category=Olympiad" className="px-4 py-2 hover:bg-white/10 text-sm font-medium text-slate-300 hover:text-white">Olympiad</Link>
-                  <Link to="/courses?category=Career" className="px-4 py-2 hover:bg-white/10 text-sm font-medium text-slate-300 hover:text-white">Job Math</Link>
-                  <Link to="/courses?category=Mathematics+and+Islam" className="px-4 py-2 hover:bg-white/10 text-sm font-medium text-[#10B981]">Math & Islam</Link>
+              <div className="absolute top-full left-0 mt-2 w-[650px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200" style={{ left: '-200px' }}>
+                <div className="p-4 bg-[#0F172A]/95 rounded-xl shadow-2xl border border-white/10 backdrop-blur-xl">
+                  <div className="grid grid-cols-5 gap-2">
+                    {displayCategories.slice(0, 5).map((cat) => {
+                      const subs = getSubsForMain(cat.title);
+                      const href = linkMap[cat.title] || `/courses?mainCategory=${encodeURIComponent(cat.title)}`;
+                      const colorClass = CATEGORY_COLORS[cat.title] || 'text-slate-300';
+                      return (
+                        <Link to={href} key={cat.id || cat.title} className="rounded-lg p-2.5 hover:bg-white/5 transition-colors">
+                          <div className={`font-bold text-xs ${colorClass} mb-1`}>{cat.title}</div>
+                          <div className="text-[9px] text-slate-400 space-y-0.5">
+                            {subs.slice(0, 5).map((s) => (
+                              <div key={s.id} className="hover:text-white transition-colors">{s.title}</div>
+                            ))}
+                            {subs.length > 5 && <div className="text-slate-500">+{subs.length - 5} more</div>}
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </div>
@@ -58,6 +134,24 @@ export default function Navbar() {
               className={`font-medium transition-colors ${isActive('/courses') ? 'text-[#10B981]' : 'text-slate-300 hover:text-white'}`}
             >
               Courses
+            </Link>
+            <Link 
+              to="/admission" 
+              className={`font-medium transition-colors ${isActive('/admission') ? 'text-[#10B981]' : 'text-slate-300 hover:text-white'}`}
+            >
+              Admission
+            </Link>
+            <Link 
+              to="/books" 
+              className={`font-medium transition-colors ${isActive('/books') ? 'text-[#10B981]' : 'text-slate-300 hover:text-white'}`}
+            >
+              Books
+            </Link>
+            <Link 
+              to="/mathematics-and-nature" 
+              className={`font-medium transition-colors ${isActive('/mathematics-and-nature') ? 'text-[#10B981]' : 'text-slate-300 hover:text-white'}`}
+            >
+              Math & Nature
             </Link>
             <Link 
               to="/exams" 
@@ -89,7 +183,7 @@ export default function Navbar() {
                   <div className="absolute right-0 top-full mt-2 w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
                     <div className="py-2 bg-[#0F172A] rounded-xl shadow-2xl border border-white/10 flex flex-col backdrop-blur-xl">
                       <Link to="/dashboard" className="px-4 py-2 hover:bg-white/10 text-sm font-medium text-slate-300 hover:text-white">Dashboard</Link>
-                      <button onClick={handleLogout} className="text-left px-4 py-2 hover:bg-white/10 text-sm font-medium text-rose-400 hover:text-rose-300">Sign Out</button>
+                      <button onClick={handleLogout} className="text-left px-4 py-2 hover:bg-white/10 text-sm font-medium text-rose-400 hover:text-rose-300">{isDemo ? 'Exit Demo' : 'Sign Out'}</button>
                     </div>
                   </div>
                 </div>
@@ -127,6 +221,9 @@ export default function Navbar() {
           <div className="px-4 pt-2 pb-6 space-y-1">
             <Link to="/" onClick={() => setIsOpen(false)} className={`block px-3 py-3 rounded-md text-base font-medium ${isActive('/') ? 'text-[#10B981] bg-white/5' : 'text-white hover:bg-white/5'}`}>Home</Link>
             <Link to="/courses" onClick={() => setIsOpen(false)} className={`block px-3 py-3 rounded-md text-base font-medium ${isActive('/courses') ? 'text-[#10B981] bg-white/5' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}>Courses</Link>
+            <Link to="/admission" onClick={() => setIsOpen(false)} className={`block px-3 py-3 rounded-md text-base font-medium ${isActive('/admission') ? 'text-[#10B981] bg-white/5' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}>Admission</Link>
+            <Link to="/books" onClick={() => setIsOpen(false)} className={`block px-3 py-3 rounded-md text-base font-medium ${isActive('/books') ? 'text-[#10B981] bg-white/5' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}>Books</Link>
+            <Link to="/mathematics-and-nature" onClick={() => setIsOpen(false)} className={`block px-3 py-3 rounded-md text-base font-medium ${isActive('/mathematics-and-nature') ? 'text-[#10B981] bg-white/5' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}>Math & Nature</Link>
             <Link to="/exams" onClick={() => setIsOpen(false)} className={`block px-3 py-3 rounded-md text-base font-medium ${isActive('/exams') ? 'text-[#10B981] bg-white/5' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}>Exams</Link>
             <Link to="/articles" onClick={() => setIsOpen(false)} className={`block px-3 py-3 rounded-md text-base font-medium ${isActive('/articles') ? 'text-[#10B981] bg-white/5' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}>Articles</Link>
             <Link to="/about" onClick={() => setIsOpen(false)} className={`block px-3 py-3 rounded-md text-base font-medium ${isActive('/about') ? 'text-[#10B981] bg-white/5' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}>About</Link>
@@ -135,7 +232,7 @@ export default function Navbar() {
               {user ? (
                 <>
                   <Link to="/dashboard" onClick={() => setIsOpen(false)} className="w-full text-center border border-[#10B981]/30 text-[#10B981] px-4 py-2.5 rounded-full font-medium bg-[#10B981]/10">Dashboard</Link>
-                  <button onClick={() => { handleLogout(); setIsOpen(false); }} className="w-full text-center border border-white/10 text-rose-400 px-4 py-2.5 rounded-full font-medium">Sign Out</button>
+                  <button onClick={() => { handleLogout(); setIsOpen(false); }} className="w-full text-center border border-white/10 text-rose-400 px-4 py-2.5 rounded-full font-medium">{isDemo ? 'Exit Demo' : 'Sign Out'}</button>
                 </>
               ) : (
                 <>
@@ -149,5 +246,6 @@ export default function Navbar() {
         </div>
       )}
     </nav>
+    </>
   );
 }

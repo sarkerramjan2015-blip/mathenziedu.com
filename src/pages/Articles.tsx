@@ -7,6 +7,7 @@ import { db } from '../lib/firebase';
 import { articles as defaultArticles } from '../lib/data';
 import type { Article } from '../lib/types';
 import { applyImageFallback, imageWithFallback } from '../lib/media';
+import SEO from '../components/SEO';
 
 export default function Articles() {
   const [articles, setArticles] = useState<Article[]>([]);
@@ -33,7 +34,13 @@ export default function Articles() {
   }, []);
 
   return (
-    <div className="pt-24 pb-16 min-h-screen">
+    <>
+      <SEO 
+        title="Articles"
+        description="Explore Mathemzi Edu's articles on mathematics philosophy, visual learning, nature patterns, and real-life mathematical applications."
+        path="/articles"
+      />
+      <div className="pt-24 pb-16 min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Header Section */}
@@ -69,9 +76,16 @@ export default function Articles() {
               >
                 <div className="relative h-48 overflow-hidden shrink-0">
                   <img src={imageWithFallback(article.image)} onError={applyImageFallback} alt={article.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-80 group-hover:opacity-100" />
-                  {article.category && (
-                    <div className="absolute top-4 left-4 bg-black/40 backdrop-blur-md border border-white/10 px-3 py-1 rounded-full text-xs font-semibold text-white">
-                      {article.category}
+                  {(article.mainCategory || article.category) && (
+                    <div className="absolute top-4 left-4 flex gap-1.5">
+                      <span className="bg-black/40 backdrop-blur-md border border-white/10 px-2.5 py-1 rounded-full text-[10px] font-semibold text-white">
+                        {article.mainCategory || article.category}
+                      </span>
+                      {article.subCategory && (
+                        <span className="bg-blue-500/20 backdrop-blur-md border border-blue-400/30 px-2.5 py-1 rounded-full text-[10px] font-semibold text-blue-300">
+                          {article.subCategory}
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>
@@ -94,5 +108,6 @@ export default function Articles() {
         )}
       </div>
     </div>
+    </>
   );
 }

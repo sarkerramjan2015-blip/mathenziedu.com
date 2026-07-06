@@ -2,7 +2,7 @@
   "entities": {
     "Category": {
       "title": "Category",
-      "description": "Category for courses",
+      "description": "Main category for courses (top-level)",
       "type": "object",
       "properties": {
         "title": { "type": "string" },
@@ -13,6 +13,18 @@
       },
       "required": ["title", "description"]
     },
+    "SubCategory": {
+      "title": "SubCategory",
+      "description": "Subcategory under a main category",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "parentMainCategory": { "type": "string" },
+        "order": { "type": "number" }
+      },
+      "required": ["title", "parentMainCategory"]
+    },
     "Course": {
       "title": "Course",
       "description": "A course entity",
@@ -21,6 +33,8 @@
         "title": { "type": "string" },
         "description": { "type": "string" },
         "category": { "type": "string" },
+        "mainCategory": { "type": "string" },
+        "subCategory": { "type": "string" },
         "instructor": { "type": "string" },
         "price": { "type": "number" },
         "rating": { "type": "number" },
@@ -38,9 +52,108 @@
         "description": { "type": "string" },
         "content": { "type": "string" },
         "category": { "type": "string" },
+        "mainCategory": { "type": "string" },
+        "subCategory": { "type": "string" },
         "image": { "type": "string" }
       },
       "required": ["title", "description", "content", "category"]
+    },
+    "Book": {
+      "title": "Book",
+      "description": "A book/resource in Books Corner",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "author": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "mainCategory": { "type": "string" },
+        "subCategory": { "type": "string" },
+        "classOrLevel": { "type": "string" },
+        "price": { "type": "number" },
+        "isFree": { "type": "boolean" },
+        "coverImage": { "type": "string" },
+        "buyUrl": { "type": "string" },
+        "downloadUrl": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["title", "author", "description", "mainCategory", "subCategory"]
+    },
+    "Enrollment": {
+      "title": "Enrollment",
+      "description": "Course enrollment record",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "courseId": { "type": "string" },
+        "courseTitle": { "type": "string" },
+        "mainCategory": { "type": "string" },
+        "subCategory": { "type": "string" },
+        "enrollmentType": { "type": "string", "enum": ["free", "paid"] },
+        "status": { "type": "string", "enum": ["active", "pending_payment", "cancelled", "completed"] },
+        "progress": { "type": "number" },
+        "enrolledAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["userId", "userEmail", "courseId", "courseTitle", "enrollmentType", "status", "enrolledAt"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Order for course, book, or exam",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "itemType": { "type": "string", "enum": ["course", "book", "exam"] },
+        "itemId": { "type": "string" },
+        "itemTitle": { "type": "string" },
+        "amount": { "type": "number" },
+        "currency": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "paid", "failed", "cancelled"] },
+        "paymentMethod": { "type": "string", "enum": ["bkash_manual", "manual", "sslcommerz", "bkash", "nagad", "shurjopay", "none"] },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["userId", "userEmail", "itemType", "itemId", "itemTitle", "amount", "currency", "status", "paymentMethod", "createdAt"]
+    },
+    "PaymentRecord": {
+      "title": "PaymentRecord",
+      "description": "Payment transaction record",
+      "type": "object",
+      "properties": {
+        "orderId": { "type": "string" },
+        "userId": { "type": "string" },
+        "amount": { "type": "number" },
+        "currency": { "type": "string" },
+        "provider": { "type": "string" },
+        "status": { "type": "string" },
+        "transactionId": { "type": "string" },
+        "providerResponse": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["orderId", "userId", "amount", "currency", "provider", "status", "createdAt"]
+    },
+    "PaymentSubmission": {
+      "title": "PaymentSubmission",
+      "description": "Manual bKash payment submission by user",
+      "type": "object",
+      "properties": {
+        "orderId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "amount": { "type": "number" },
+        "senderBkashNumber": { "type": "string" },
+        "transactionId": { "type": "string" },
+        "paymentNote": { "type": "string" },
+        "status": { "type": "string", "enum": ["submitted", "verified", "rejected"] },
+        "adminNote": { "type": "string" },
+        "submittedAt": { "type": "number" },
+        "reviewedAt": { "type": "number" }
+      },
+      "required": ["orderId", "userId", "userEmail", "amount", "senderBkashNumber", "transactionId", "status", "submittedAt"]
     },
     "User": {
       "title": "User",
@@ -78,7 +191,11 @@
   "firestore": {
     "/categories/{categoryId}": {
       "schema": { "$ref": "#/entities/Category" },
-      "description": "Categories for courses"
+      "description": "Main categories"
+    },
+    "/subcategories/{subCategoryId}": {
+      "schema": { "$ref": "#/entities/SubCategory" },
+      "description": "Subcategories under main categories"
     },
     "/courses/{courseId}": {
       "schema": { "$ref": "#/entities/Course" },
@@ -87,6 +204,26 @@
     "/articles/{articleId}": {
       "schema": { "$ref": "#/entities/Article" },
       "description": "Articles / blog posts"
+    },
+    "/books/{bookId}": {
+      "schema": { "$ref": "#/entities/Book" },
+      "description": "Books for the Books Corner section"
+    },
+    "/enrollments/{enrollmentId}": {
+      "schema": { "$ref": "#/entities/Enrollment" },
+      "description": "Course enrollments"
+    },
+    "/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/Order" },
+      "description": "Orders for courses, books, and exams"
+    },
+    "/payments/{paymentId}": {
+      "schema": { "$ref": "#/entities/PaymentRecord" },
+      "description": "Payment transaction records"
+    },
+    "/paymentSubmissions/{submissionId}": {
+      "schema": { "$ref": "#/entities/PaymentSubmission" },
+      "description": "Manual bKash payment submissions by users"
     },
     "/users/{userId}": {
       "schema": { "$ref": "#/entities/User" },

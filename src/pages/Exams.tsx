@@ -3,6 +3,7 @@ import { exams } from '../lib/data';
 import { Calendar, Clock, FileText, CheckCircle, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { formatCurrency } from '../lib/media';
+import SEO from '../components/SEO';
 
 export default function Exams() {
   const [filter, setFilter] = useState('All');
@@ -11,7 +12,13 @@ export default function Exams() {
   const filteredExams = filter === 'All' ? exams : exams.filter(e => e.type === filter);
 
   return (
-    <div className="min-h-screen py-12 relative z-10 w-full">
+    <>
+      <SEO 
+        title="Exams"
+        description="Prepare for mathematics exams with Mathemzi Edu — MCQ and written model tests for olympiad, academic, and admission exams."
+        path="/exams"
+      />
+      <div className="min-h-screen py-12 relative z-10 w-full">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         <div className="mb-12">
@@ -49,8 +56,13 @@ export default function Exams() {
                     {exam.type}
                   </span>
                   <span className="px-3 py-1 rounded bg-black/30 text-slate-300 text-xs font-medium uppercase tracking-wider border border-white/5">
-                    {exam.category}
+                    {exam.mainCategory || exam.category}
                   </span>
+                  {exam.subCategory && (
+                    <span className="px-3 py-1 rounded bg-blue-500/10 text-blue-300 text-xs font-medium uppercase tracking-wider border border-blue-500/20">
+                      {exam.subCategory}
+                    </span>
+                  )}
                 </div>
                 
                 <h2 className="text-2xl font-bold text-white mb-5">{exam.title}</h2>
@@ -91,5 +103,6 @@ export default function Exams() {
 
       </div>
     </div>
+    </>
   );
 }

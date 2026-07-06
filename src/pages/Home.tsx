@@ -1,58 +1,93 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight, Star, Clock, Users, PlayCircle, BookOpen, Brain, TrendingUp, Award, Calendar } from 'lucide-react';
+import { ChevronRight, Star, Clock, Users, PlayCircle, BookOpen, Brain, Award, Calendar, BookMarked, Sigma, Library, Shapes, BarChart, Shield, CreditCard } from 'lucide-react';
 import { motion } from 'motion/react';
-import { articles as defaultArticles, courses as dummyCourses, exams } from '../lib/data';
+import { articles as defaultArticles, courses as dummyCourses, exams, MAIN_CATEGORIES_DATA } from '../lib/data';
 import { collection, getDocs, doc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../lib/AuthContext';
-import { isAdminEmail } from '../lib/admin';
-import type { Article, Category, Course } from '../lib/types';
+import { isAdminUser } from '../lib/admin';
+import type { Article, MainCategory, SubCategory, Course } from '../lib/types';
 import { applyImageFallback, formatCurrency, imageWithFallback } from '../lib/media';
+import { useSiteSettings } from '../lib/useSiteConfig';
+import SEO from '../components/SEO';
+
+const MAIN_ICONS: Record<string, React.ElementType> = {
+  'Academic Maths': BookOpen,
+  'Olympiad': Award,
+  'Admission Course': Brain,
+  'Books Corner': Library,
+  'Mathematics and Nature': Shapes,
+};
+
+// Subcategory icons mapping
+const SUBCAT_COLORS: Record<string, string> = {
+  'Standard One-Seven': 'text-emerald-400',
+  'O Level': 'text-blue-400',
+  'A Level': 'text-purple-400',
+  'Junior Level': 'text-yellow-400',
+  'Secondary Level': 'text-orange-400',
+  'Higher Secondary Level': 'text-red-400',
+  'University Admission': 'text-sky-400',
+  'Engineering Admission': 'text-cyan-400',
+  'Medical Admission': 'text-green-400',
+  'Other Admission Courses': 'text-slate-400',
+  'Academic Books': 'text-amber-400',
+  'Olympiad Books': 'text-indigo-400',
+  'Admission Books': 'text-teal-400',
+  'Practice Books': 'text-pink-400',
+  'Articles': 'text-rose-400',
+  'Visual Learning': 'text-violet-400',
+  'Real-life Mathematics': 'text-lime-400',
+  'Nature Patterns': 'text-emerald-300',
+};
 
 export default function Home() {
-  const { user } = useAuth();
-  const isAdmin = isAdminEmail(user?.email);
+  const { user, userRole } = useAuth();
+  const siteCfg = useSiteSettings();
+  const isAdmin = isAdminUser(userRole, user?.email);
   const [courses, setCourses] = useState<Course[]>(dummyCourses);
-  const [categories, setCategories] = useState([
-    { title: 'Academic Maths', desc: 'School & College', icon: BookOpen, color: 'text-[#F59E0B]' },
-    { title: 'Olympiad', desc: 'Problem Solving', icon: Award, color: 'text-[#2563EB]' },
-    { title: 'Career', desc: 'Job & Viva Prep', icon: TrendingUp, color: 'text-[#10B981]' },
-    { title: 'Mathematics and Islam', desc: 'Divine Symmetry', icon: Brain, color: 'text-purple-400' },
-    { title: 'Public Speaking', desc: 'Viva Prep', icon: Users, color: 'text-rose-400' },
-  ]);
-
+  const [categories, setCategories] = useState<MainCategory[]>([]);
+  const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
   const [articles, setArticles] = useState<Article[]>(defaultArticles.slice(0, 3));
   const [loadingArticles, setLoadingArticles] = useState(true);
 
+  // Build the display categories from Firestore or fallback
+  const displayCategories = categories.length > 0 ? categories : MAIN_CATEGORIES_DATA;
+  const displaySubCategories = subCategories;
+
   const fetchContent = async () => {
     try {
-      const catSnap = await getDocs(collection(db, 'categories'));
-      if (!catSnap.empty) {
-        const dbCats = catSnap.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Category[];
-        setCategories(dbCats.map(cat => ({
-          title: cat.title,
-          desc: cat.description,
-          icon: BookOpen, // Default icon for dynamic
-          color: cat.color || 'text-white'
-        })));
-      }
+      const [catSnap, subSnap, courseSnap, articleSnap] = await Promise.all([
+        getDocs(collection(db, 'categories')),
+        getDocs(collection(db, 'subcategories')),
+        getDocs(collection(db, 'courses')),
+        getDocs(collection(db, 'articles')),
+      ]);
 
-      const courseSnap = await getDocs(collection(db, 'courses'));
+      if (!catSnap.empty) {
+        setCategories(catSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as MainCategory[]);
+      }
+      if (!subSnap.empty) {
+        setSubCategories(subSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as SubCategory[]);
+      }
       if (!courseSnap.empty) {
         setCourses(courseSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Course[]);
       }
-
-      const articleSnap = await getDocs(collection(db, 'articles'));
       if (!articleSnap.empty) {
         setArticles(articleSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })).slice(0, 3) as Article[]);
       }
       setLoadingArticles(false);
     } catch (error) {
       console.error(error);
+      // Fallback: use MAIN_CATEGORIES_DATA if no Firestore data
+      setCategories(MAIN_CATEGORIES_DATA.map((c, i) => ({
+        id: String(i + 1),
+        title: c.title,
+        description: c.description,
+        color: c.color,
+        order: c.order,
+      })));
       setLoadingArticles(false);
     }
   };
@@ -64,13 +99,13 @@ export default function Home() {
   const seedDummyData = async () => {
     if (!isAdmin) return;
     try {
-      // Seed Categories
+      // Seed Main Categories
       const dummyCats = [
-        { id: 'cat1', title: 'Academic Maths', description: 'School & College', color: 'text-[#F59E0B]', order: 1 },
-        { id: 'cat2', title: 'Olympiad', description: 'Problem Solving', color: 'text-[#2563EB]', order: 2 },
-        { id: 'cat3', title: 'Career', description: 'Job & Viva Prep', color: 'text-[#10B981]', order: 3 },
-        { id: 'cat4', title: 'Mathematics and Islam', description: 'Divine Symmetry', color: 'text-purple-400', order: 4 },
-        { id: 'cat5', title: 'Public Speaking', description: 'Viva Prep', color: 'text-rose-400', order: 5 },
+        { id: 'cat1', title: 'Academic Maths', description: 'School & College curriculum', color: 'text-[#F59E0B]', order: 1 },
+        { id: 'cat2', title: 'Olympiad', description: 'Problem Solving & competition', color: 'text-[#2563EB]', order: 2 },
+        { id: 'cat3', title: 'Admission Course', description: 'University & job admission prep', color: 'text-[#10B981]', order: 3 },
+        { id: 'cat4', title: 'Books Corner', description: 'Book resources & practice', color: 'text-purple-400', order: 4 },
+        { id: 'cat5', title: 'Mathematics and Nature', description: 'Articles, visuals & real-life math', color: 'text-rose-400', order: 5 },
       ];
       
       for (const cat of dummyCats) {
@@ -82,30 +117,82 @@ export default function Home() {
         });
       }
 
-      // Seed Courses
-      for (const course of dummyCourses) {
+      // Seed SubCategories — expanded for Bangladesh market
+      const dummySubs = [
+        // Academic Maths
+        { parentMainCategory: 'Academic Maths', title: 'Standard One-Seven', order: 1 },
+        { parentMainCategory: 'Academic Maths', title: 'Standard Eight-Ten', order: 2 },
+        { parentMainCategory: 'Academic Maths', title: 'SSC Mathematics', order: 3 },
+        { parentMainCategory: 'Academic Maths', title: 'HSC Higher Mathematics', order: 4 },
+        { parentMainCategory: 'Academic Maths', title: 'O Level', order: 5 },
+        { parentMainCategory: 'Academic Maths', title: 'A Level', order: 6 },
+        // Olympiad
+        { parentMainCategory: 'Olympiad', title: 'Primary Level', order: 1 },
+        { parentMainCategory: 'Olympiad', title: 'Junior Level', order: 2 },
+        { parentMainCategory: 'Olympiad', title: 'Secondary Level', order: 3 },
+        { parentMainCategory: 'Olympiad', title: 'Higher Secondary Level', order: 4 },
+        { parentMainCategory: 'Olympiad', title: 'Problem Solving', order: 5 },
+        { parentMainCategory: 'Olympiad', title: 'Number Theory', order: 6 },
+        { parentMainCategory: 'Olympiad', title: 'Geometry', order: 7 },
+        { parentMainCategory: 'Olympiad', title: 'Combinatorics', order: 8 },
+        { parentMainCategory: 'Olympiad', title: 'Algebra', order: 9 },
+        // Admission Course
+        { parentMainCategory: 'Admission Course', title: 'University Admission Math', order: 1 },
+        { parentMainCategory: 'Admission Course', title: 'Engineering Admission Math', order: 2 },
+        { parentMainCategory: 'Admission Course', title: 'Medical Admission Math', order: 3 },
+        { parentMainCategory: 'Admission Course', title: 'GST Admission Math', order: 4 },
+        { parentMainCategory: 'Admission Course', title: 'IBA/BBA Math', order: 5 },
+        { parentMainCategory: 'Admission Course', title: 'Written Math Preparation', order: 6 },
+        { parentMainCategory: 'Admission Course', title: 'Shortcut Math & Problem Solving', order: 7 },
+        // Books Corner
+        { parentMainCategory: 'Books Corner', title: 'Academic Books', order: 1 },
+        { parentMainCategory: 'Books Corner', title: 'Olympiad Books', order: 2 },
+        { parentMainCategory: 'Books Corner', title: 'Admission Books', order: 3 },
+        { parentMainCategory: 'Books Corner', title: 'Practice Books', order: 4 },
+        { parentMainCategory: 'Books Corner', title: 'Formula Sheets', order: 5 },
+        { parentMainCategory: 'Books Corner', title: 'PDF Resources', order: 6 },
+        { parentMainCategory: 'Books Corner', title: 'Model Test Books', order: 7 },
+        // Mathematics and Nature
+        { parentMainCategory: 'Mathematics and Nature', title: 'Fibonacci Sequence', order: 1 },
+        { parentMainCategory: 'Mathematics and Nature', title: 'Golden Ratio', order: 2 },
+        { parentMainCategory: 'Mathematics and Nature', title: 'Symmetry', order: 3 },
+        { parentMainCategory: 'Mathematics and Nature', title: 'Fractals', order: 4 },
+        { parentMainCategory: 'Mathematics and Nature', title: 'Geometry in Nature', order: 5 },
+        { parentMainCategory: 'Mathematics and Nature', title: 'Mathematical Patterns', order: 6 },
+        { parentMainCategory: 'Mathematics and Nature', title: 'Real-life Mathematics', order: 7 },
+      ];
+
+      for (let i = 0; i < dummySubs.length; i++) {
+        await setDoc(doc(db, 'subcategories', `sub${i + 1}`), dummySubs[i]);
+      }
+
+      // Seed Courses — 8 courses
+      const dummyCoursesList = [
+        { id: '1', title: 'Standard One–Seven Foundation Mathematics', description: 'Build a strong mathematics foundation for primary and junior secondary students with structured lessons.', instructor: 'Mathemzi Edu Mentor', price: 1200, duration: '8 Weeks', lessons: 32, rating: 4.7, mainCategory: 'Academic Maths', subCategory: 'Standard One-Seven', level: 'Beginner', image: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?q=80&w=1600&auto=format&fit=crop', outcomes: ['Strong arithmetic and number sense', 'Basic algebra and geometry fundamentals', 'Problem solving confidence', 'Weekly practice tests'], curriculum: [{ title: 'Number Systems', lessons: 6, time: '1h 50m' }, { title: 'Basic Operations', lessons: 8, time: '2h 30m' }, { title: 'Fractions & Decimals', lessons: 6, time: '1h 45m' }] },
+        { id: '2', title: 'SSC Mathematics Complete Course', description: 'Complete SSC Mathematics syllabus coverage with board-focused examples and model tests.', instructor: 'Prof. Anisul Islam', price: 1500, duration: '12 Weeks', lessons: 48, rating: 4.6, mainCategory: 'Academic Maths', subCategory: 'SSC Mathematics', level: 'Intermediate', image: 'https://images.unsplash.com/photo-1509228468518-180dd4864904?q=80&w=1600&auto=format&fit=crop', outcomes: ['Full syllabus mastery', 'Board exam pattern practice', 'Written answer techniques'], curriculum: [{ title: 'Algebra & Equations', lessons: 10, time: '3h 50m' }, { title: 'Geometry & Trigonometry', lessons: 12, time: '4h 20m' }] },
+        { id: '3', title: 'HSC Higher Mathematics Foundation', description: 'Master HSC Higher Mathematics with detailed calculus, geometry, and board exam preparation.', instructor: 'Prof. Anisul Islam', price: 2000, duration: '12 Weeks', lessons: 48, rating: 4.7, mainCategory: 'Academic Maths', subCategory: 'HSC Higher Mathematics', level: 'Advanced', image: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?q=80&w=1600&auto=format&fit=crop', outcomes: ['Full HSC Higher Math coverage', 'Calculus mastery', 'Board written answer patterns'], curriculum: [{ title: 'Differentiation', lessons: 12, time: '4h 30m' }, { title: 'Integration', lessons: 12, time: '4h 30m' }] },
+        { id: '4', title: 'O Level Mathematics Preparation', description: 'Cambridge O Level Mathematics complete preparation with past paper practice.', instructor: 'Mathemzi Edu Mentor', price: 2500, duration: '10 Weeks', lessons: 40, rating: 4.5, mainCategory: 'Academic Maths', subCategory: 'O Level', level: 'Intermediate', image: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?q=80&w=1600&auto=format&fit=crop', outcomes: ['Complete O Level syllabus', 'Past paper strategies', 'Scientific calculator skills'], curriculum: [{ title: 'Number & Algebra', lessons: 12, time: '3h 40m' }, { title: 'Geometry', lessons: 10, time: '3h 15m' }] },
+        { id: '5', title: 'A Level Pure Mathematics Starter', description: 'A Level Pure Mathematics 1 & 2 complete preparation with proof-based approach.', instructor: 'Prof. Anisul Islam', price: 3000, duration: '12 Weeks', lessons: 52, rating: 4.8, mainCategory: 'Academic Maths', subCategory: 'A Level', level: 'Advanced', image: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?q=80&w=1600&auto=format&fit=crop', outcomes: ['Full A Level coverage', 'Proof-based reasoning', 'Exam techniques'], curriculum: [{ title: 'Functions', lessons: 8, time: '3h 30m' }, { title: 'Trigonometry', lessons: 10, time: '4h 00m' }] },
+        { id: '6', title: 'Junior Math Olympiad Preparation', description: 'Olympiad training for junior students with problem-solving and mock contests.', instructor: 'Dr. Hasan Rahman', price: 2000, duration: '8 Weeks', lessons: 36, rating: 4.9, mainCategory: 'Olympiad', subCategory: 'Junior Level', level: 'Intermediate', image: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?q=80&w=1600&auto=format&fit=crop', outcomes: ['Number theory', 'Combinatorics', 'Geometry proofs'], curriculum: [{ title: 'Number Theory', lessons: 8, time: '2h 50m' }, { title: 'Algebra', lessons: 8, time: '2h 50m' }] },
+        { id: '7', title: 'Secondary Math Olympiad Problem Solving', description: 'Advanced olympiad training covering core areas with competition-level practice.', instructor: 'Dr. Hasan Rahman', price: 2500, duration: '10 Weeks', lessons: 40, rating: 4.8, mainCategory: 'Olympiad', subCategory: 'Secondary Level', level: 'Advanced', image: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?q=80&w=1600&auto=format&fit=crop', outcomes: ['Advanced number theory', 'Combinatorics', 'National olympiad prep'], curriculum: [{ title: 'Number Theory Advanced', lessons: 8, time: '3h 10m' }, { title: 'Combinatorics', lessons: 8, time: '3h 00m' }] },
+        { id: '8', title: 'Engineering Admission Math Crash Course', description: 'Focused engineering admission math preparation with shortcut techniques.', instructor: 'Ayesha Siddiqua', price: 2000, duration: '10 Weeks', lessons: 40, rating: 4.9, mainCategory: 'Admission Course', subCategory: 'Engineering Admission Math', level: 'Advanced', image: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?q=80&w=1600&auto=format&fit=crop', outcomes: ['Shortcut techniques', 'Pattern recognition', 'Mock test strategy'], curriculum: [{ title: 'Arithmetic Speed', lessons: 8, time: '3h 00m' }, { title: 'Algebra', lessons: 10, time: '3h 50m' }] },
+      ];
+
+      for (const course of dummyCoursesList) {
         await setDoc(doc(db, 'courses', course.id), {
-          title: course.title,
-          description: course.description,
-          category: course.category,
-          instructor: course.instructor,
-          price: course.price,
-          rating: course.rating,
-          lessons: course.lessons,
-          duration: course.duration,
-          image: course.image || '',
-          level: course.level || '',
-          enrolled: course.enrolled || 0,
-          outcomes: course.outcomes || [],
-          curriculum: course.curriculum || [],
+          title: course.title, description: course.description,
+          category: course.mainCategory, mainCategory: course.mainCategory, subCategory: course.subCategory,
+          instructor: course.instructor, price: course.price, rating: course.rating,
+          lessons: course.lessons, duration: course.duration, image: course.image,
+          level: course.level, enrolled: 0, outcomes: course.outcomes, curriculum: course.curriculum,
         });
       }
       
-      alert('Data seeded successfully!');
+      alert('Demo data seeded successfully! Refresh to see changes.');
       fetchContent();
     } catch (error) {
       console.error(error);
-      alert('Error seeding data');
+      alert('Error seeding data: ' + (error as Error).message);
     }
   };
 
@@ -124,8 +211,25 @@ export default function Home() {
     visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } }
   };
 
+  // Get subcategories for a main category
+  const getSubsForMain = (mainTitle: string) => {
+    if (subCategories.length > 0) {
+      return subCategories.filter(s => s.parentMainCategory === mainTitle);
+    }
+    // Fallback to data.ts static data
+    const found = MAIN_CATEGORIES_DATA.find(c => c.title === mainTitle);
+    return found ? found.subCategories.map((title, i) => ({ id: `sub-${i}`, title, parentMainCategory: mainTitle })) : [];
+  };
+
   return (
-    <div className="w-full">
+    <>
+      <SEO 
+        title="Mathemzi Edu | Premium Mathematics Learning Platform in Bangladesh"
+        description="Master Mathematics for School, Olympiad & Admission Success. Mathemzi Edu helps Bangladeshi students build strong mathematical foundations through structured courses, practice exams, books, and progress tracking."
+        path="/"
+        keywords="mathematics learning Bangladesh, math courses, olympiad preparation, admission math, SSC math, HSC higher math, O Level math, A Level math, math books Bangladesh, math practice exams"
+      />
+      <div className="w-full">
       {/* Decorative Math Symbols */}
       <div className="absolute top-20 right-40 text-white/5 text-9xl font-serif select-none pointer-events-none">∑</div>
       <div className="absolute bottom-40 left-10 text-white/5 text-8xl font-serif select-none pointer-events-none">∫</div>
@@ -143,7 +247,7 @@ export default function Home() {
             className="inline-flex items-center gap-2 px-3 py-1 bg-[#10B981]/20 border border-[#10B981]/30 rounded-full text-[#10B981] text-xs font-bold uppercase tracking-wider mb-6"
           >
             <span className="animate-pulse w-2 h-2 bg-[#10B981] rounded-full"></span>
-            <span>Premium Mathematics Platform</span>
+            <span>Bangladesh's Premium Math Platform</span>
           </motion.div>
           
           <motion.h1 
@@ -152,17 +256,29 @@ export default function Home() {
             transition={{ duration: 0.8, ease: "easeOut", delay: 0.1 }}
             className="text-[2.15rem] sm:text-5xl md:text-7xl font-extrabold leading-[1.08] mb-6 max-w-4xl mx-auto tracking-tight text-[#F8FAFC] break-words"
           >
-            Learn Math with <br className="sm:hidden" /><span className="text-[#F59E0B]">Logic</span>, <br />Beauty & Faith.
+            {siteCfg.heroTitle}
           </motion.h1>
           
           <motion.p 
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: "easeOut", delay: 0.3 }}
-            className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed text-balance"
+            className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-8 leading-relaxed text-balance"
           >
-            Academic math, Olympiad, career math, public speaking, viva, articles, and exams in one complete platform.
+            {siteCfg.heroSubtitle}
           </motion.p>
+
+          {/* Hero Sub-tagline in Bangla */}
+          {siteCfg.banglaTagline && (
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: "easeOut", delay: 0.4 }}
+            className="text-base md:text-lg text-[#F59E0B] max-w-2xl mx-auto mb-10 font-bold"
+          >
+            &#x201C;{siteCfg.banglaTagline}&#x201D;
+          </motion.p>
+          )}
           
           <motion.div 
             initial={{ opacity: 0, y: 30 }}
@@ -170,11 +286,14 @@ export default function Home() {
             transition={{ duration: 0.8, ease: "easeOut", delay: 0.5 }}
             className="flex flex-col sm:flex-row items-center justify-center gap-4"
           >
-            <Link to="/courses" className="w-full sm:w-auto px-8 py-4 rounded-xl bg-white text-[#0F172A] font-bold text-lg transition-transform hover:scale-105 duration-300 shadow-xl hover:bg-slate-100 flex items-center justify-center gap-2">
-              Explore Courses <ChevronRight className="h-5 w-5" />
+            <Link to={siteCfg.heroBtn1Link} className="w-full sm:w-auto px-8 py-4 rounded-xl bg-white text-[#0F172A] font-bold text-lg transition-transform hover:scale-105 duration-300 shadow-xl hover:bg-slate-100 flex items-center justify-center gap-2">
+              {siteCfg.heroBtn1Text} <ChevronRight className="h-5 w-5" />
             </Link>
-            <Link to="/exams" className="w-full sm:w-auto px-8 py-4 rounded-xl bg-white/10 border border-white/20 backdrop-blur-lg font-bold text-lg text-white hover:bg-white/20 hover:scale-105 transition-all duration-300 shadow-lg flex items-center justify-center gap-2">
-              Practice Exams <Calendar className="h-5 w-5" />
+            <Link to={siteCfg.heroBtn2Link} className="w-full sm:w-auto px-8 py-4 rounded-xl bg-white/10 border border-white/20 backdrop-blur-lg font-bold text-lg text-white hover:bg-white/20 hover:scale-105 transition-all duration-300 shadow-lg flex items-center justify-center gap-2">
+              {siteCfg.heroBtn2Text} <Calendar className="h-5 w-5" />
+            </Link>
+            <Link to={siteCfg.heroBtn3Link} className="w-full sm:w-auto px-8 py-4 rounded-xl bg-purple-500/20 border border-purple-400/30 backdrop-blur-lg font-bold text-lg text-white hover:bg-purple-500/30 hover:scale-105 transition-all duration-300 shadow-lg flex items-center justify-center gap-2">
+              {siteCfg.heroBtn3Text} <BookMarked className="h-5 w-5" />
             </Link>
           </motion.div>
         </div>
@@ -193,22 +312,48 @@ export default function Home() {
               </button>
             </div>
           )}
+          
+          {/* Main Category Cards */}
           <motion.div 
             variants={containerVariants}
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "-100px" }}
-            className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:grid-cols-5 gap-4 md:gap-6 min-w-0"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6 min-w-0"
           >
-            {categories.map((cat, i) => (
-              <Link to={`/courses?category=${encodeURIComponent(cat.title)}`} key={i} className="min-w-0">
-                <motion.div variants={itemVariants} className="bg-white/5 border border-white/10 p-4 md:p-6 rounded-xl backdrop-blur-sm hover:bg-white/10 transition-all duration-300 hover:-translate-y-2 cursor-pointer group flex flex-col items-center text-center shadow-lg hover:shadow-2xl h-full min-w-0">
-                   <cat.icon className={`h-8 w-8 ${cat.color} mb-3 group-hover:scale-110 transition-transform duration-300`} />
-                   <div className={`font-bold mb-1 ${cat.color}`}>{cat.title}</div>
-                   <div className="text-xs text-slate-400">{cat.desc}</div>
-                </motion.div>
-              </Link>
-            ))}
+            {displayCategories.map((cat, i) => {
+              const IconComp = MAIN_ICONS[cat.title] || BookOpen;
+              const subs = getSubsForMain(cat.title);
+              // Map dedicated pages
+              const linkMap: Record<string, string> = {
+                'Admission Course': '/admission',
+                'Books Corner': '/books',
+                'Mathematics and Nature': '/mathematics-and-nature',
+              };
+              const href = linkMap[cat.title] || `/courses?mainCategory=${encodeURIComponent(cat.title)}`;
+              return (
+                <Link to={href} key={cat.id || i} className="min-w-0">
+                  <motion.div variants={itemVariants} className="bg-white/5 border border-white/10 p-4 md:p-5 rounded-xl backdrop-blur-sm hover:bg-white/[0.08] transition-all duration-300 hover:-translate-y-2 cursor-pointer group flex flex-col shadow-lg hover:shadow-2xl h-full min-w-0">
+                    <IconComp className={`h-7 w-7 ${cat.color || 'text-white'} mb-3 group-hover:scale-110 transition-transform duration-300`} />
+                    <div className={`font-bold text-sm md:text-base mb-1 ${cat.color || 'text-white'}`}>{cat.title}</div>
+                    <div className="text-xs text-slate-400 mb-2">{cat.description}</div>
+                    {/* Subcategory pills */}
+                    {subs.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-auto pt-2 border-t border-white/5">
+                        {subs.slice(0, 3).map((sub, si) => (
+                          <span key={sub.id || si} className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-white/5 border border-white/10 ${SUBCAT_COLORS[sub.title] || 'text-slate-400'}`}>
+                            {sub.title}
+                          </span>
+                        ))}
+                        {subs.length > 3 && (
+                          <span className="text-[9px] text-slate-500">+{subs.length - 3}</span>
+                        )}
+                      </div>
+                    )}
+                  </motion.div>
+                </Link>
+              );
+            })}
           </motion.div>
         </div>
       </section>
@@ -224,8 +369,8 @@ export default function Home() {
             className="flex justify-between items-end mb-12"
           >
             <div>
-              <h2 className="text-3xl font-extrabold mb-2 text-[#F8FAFC]">Upcoming Exams</h2>
-              <p className="text-slate-400">Test your skills and prepare for reality.</p>
+              <h2 className="text-3xl font-extrabold mb-2 text-[#F8FAFC]">Practice Exams</h2>
+              <p className="text-slate-400">Test your skills with MCQ and written exams. Get results and earn certificates.</p>
             </div>
             <Link to="/exams" className="text-slate-300 hover:text-white font-medium flex items-center gap-1 transition-colors hover:translate-x-1 duration-300">
               All Exams <ChevronRight className="h-4 w-4" />
@@ -286,8 +431,8 @@ export default function Home() {
             className="flex justify-between items-end mb-12"
           >
             <div>
-              <h2 className="text-3xl md:text-4xl font-extrabold mb-4 text-[#F8FAFC]">Popular Courses</h2>
-              <p className="text-slate-400">Join thousands of students mastering mathematics.</p>
+              <h2 className="text-3xl md:text-4xl font-extrabold mb-4 text-[#F8FAFC]">Featured Courses</h2>
+              <p className="text-slate-400">Structured learning paths for every level of mathematics.</p>
             </div>
             <Link to="/courses" className="hidden md:flex items-center gap-2 text-slate-300 hover:text-white font-medium transition-colors hover:translate-x-1 duration-300">
               View All Courses <ChevronRight className="h-4 w-4" />
@@ -345,7 +490,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
             
-            {/* Islamic Math Section */}
+            {/* Mathematics and Nature Section */}
             <motion.div 
               initial={{ opacity: 0, x: -50 }}
               whileInView={{ opacity: 1, x: 0 }}
@@ -356,24 +501,32 @@ export default function Home() {
               <div className="absolute inset-0 pattern-islamic opacity-50 mix-blend-overlay"></div>
               <div className="relative z-10 flex gap-6 sm:items-center">
                 <div className="w-20 h-20 bg-white/10 rounded-2xl flex-shrink-0 flex items-center justify-center border border-white/10 hidden sm:flex transform hover:rotate-12 transition-transform duration-500">
-                  <svg className="w-10 h-10 text-[#F59E0B]" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L1 12h3v9h6v-6h4v6h6v-9h3L12 2z"/></svg>
+                  <Shapes className="w-10 h-10 text-[#F59E0B]" />
                 </div>
                 <div>
                   <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-[10px] font-bold uppercase tracking-wider text-[#10B981] mb-4">
-                    Special Insights
+                    Explore & Discover
                   </div>
-                  <h2 className="text-3xl font-extrabold mb-3 text-white">Mathematics & Islam</h2>
+                  <h2 className="text-3xl font-extrabold mb-3 text-white">Mathematics & Nature</h2>
                   <p className="text-slate-400 text-sm leading-relaxed max-w-md mb-4">
-                    Explore the divine symmetry, golden ratio, and historical contributions of Islamic scholars to the world of mathematics.
+                    Discover math in the world around you — patterns, symmetry, golden ratio, and the beauty of numbers in nature.
                   </p>
-                  <Link to="/articles" className="text-sm font-bold text-[#F59E0B] inline-flex items-center gap-1 hover:text-amber-400 hover:gap-2 transition-all">
-                    Read Articles <ChevronRight className="h-4 w-4" />
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {getSubsForMain('Mathematics and Nature').map((sub, si) => (
+                      <Link key={sub.id || si} to={`/mathematics-and-nature?subCategory=${encodeURIComponent(sub.title)}`} 
+                        className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 transition-colors">
+                        {sub.title}
+                      </Link>
+                    ))}
+                  </div>
+                  <Link to="/mathematics-and-nature" className="text-sm font-bold text-[#F59E0B] inline-flex items-center gap-1 hover:text-amber-400 hover:gap-2 transition-all">
+                    Explore More <ChevronRight className="h-4 w-4" />
                   </Link>
                 </div>
               </div>
             </motion.div>
 
-            {/* Success Stats */}
+            {/* Trust & Platform Features */}
             <motion.div 
               initial={{ opacity: 0, x: 50 }}
               whileInView={{ opacity: 1, x: 0 }}
@@ -381,20 +534,39 @@ export default function Home() {
               transition={{ duration: 0.8, ease: "easeOut" }}
               className="flex flex-col justify-center"
             >
-              <div className="flex justify-around items-center py-10 bg-[#1E293B]/50 rounded-3xl border border-white/10 backdrop-blur-sm h-full shadow-2xl hover:bg-[#1E293B]/70 transition-colors duration-500">
-                <div className="text-center group">
-                  <div className="text-4xl font-bold text-white mb-2 group-hover:scale-110 group-hover:text-[#3B82F6] transition-all duration-300">45k+</div>
-                  <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">Learners</div>
-                </div>
-                <div className="w-[1px] h-16 bg-white/10"></div>
-                <div className="text-center group">
-                  <div className="text-4xl font-bold text-white mb-2 group-hover:scale-110 group-hover:text-[#F59E0B] transition-all duration-300">120+</div>
-                  <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">Courses</div>
-                </div>
-                <div className="w-[1px] h-16 bg-white/10"></div>
-                <div className="text-center group">
-                  <div className="text-4xl font-bold text-white mb-2 group-hover:scale-110 group-hover:text-[#10B981] transition-all duration-300">98%</div>
-                  <div className="text-xs font-bold text-[#10B981] uppercase tracking-widest">Success</div>
+              <div className="py-8 px-6 bg-[#1E293B]/50 rounded-3xl border border-white/10 backdrop-blur-sm h-full shadow-2xl hover:bg-[#1E293B]/70 transition-colors duration-500">
+                <h3 className="text-lg font-bold text-white mb-6 text-center">Why Learn With Mathemzi Edu</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-lg bg-[#10B981]/20 flex items-center justify-center shrink-0">
+                      <BookOpen className="h-4 w-4 text-[#10B981]" />
+                    </div>
+                    <span className="text-sm text-slate-300">Structured learning paths for all levels</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-lg bg-[#2563EB]/20 flex items-center justify-center shrink-0">
+                      <Calendar className="h-4 w-4 text-[#2563EB]" />
+                    </div>
+                    <span className="text-sm text-slate-300">Practice-based exam preparation</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-lg bg-purple-500/20 flex items-center justify-center shrink-0">
+                      <CreditCard className="h-4 w-4 text-purple-400" />
+                    </div>
+                    <span className="text-sm text-slate-300">Manual bKash verified enrollment</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-lg bg-[#F59E0B]/20 flex items-center justify-center shrink-0">
+                      <BarChart className="h-4 w-4 text-[#F59E0B]" />
+                    </div>
+                    <span className="text-sm text-slate-300">Progress tracking &amp; completion certificates</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-lg bg-rose-400/20 flex items-center justify-center shrink-0">
+                      <Shield className="h-4 w-4 text-rose-400" />
+                    </div>
+                    <span className="text-sm text-slate-300">Admin-managed content &amp; quality control</span>
+                  </div>
                 </div>
               </div>
             </motion.div>
@@ -434,5 +606,6 @@ export default function Home() {
       </div>
 
     </div>
+    </>
   );
 }

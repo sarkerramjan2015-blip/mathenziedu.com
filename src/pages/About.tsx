@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { Target, Eye, Heart, Users, Zap, BookOpen } from 'lucide-react';
+import SEO from '../components/SEO';
 
 export default function About() {
   const containerVariants = {
@@ -17,7 +18,13 @@ export default function About() {
   };
 
   return (
-    <div className="min-h-screen py-20 relative z-10 w-full overflow-hidden text-slate-300">
+    <>
+      <SEO 
+        title="About"
+        description="Learn about Mathemzi Edu — Bangladesh's premium mathematics learning platform. Mission, vision, values, and our commitment to math education."
+        path="/about"
+      />
+      <div className="min-h-screen py-20 relative z-10 w-full overflow-hidden text-slate-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
@@ -140,5 +147,6 @@ export default function About() {
 
       </div>
     </div>
+    </>
   );
 }

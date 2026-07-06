@@ -2,7 +2,8 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { ShieldAlert } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
-import { isAdminEmail } from '../lib/admin';
+import { isAdminUser } from '../lib/admin';
+import { DEMO_MODE, isDemoSessionActive, getDemoRole } from '../lib/demo';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -32,16 +33,28 @@ function AccessDenied() {
 }
 
 export default function ProtectedRoute({ children, adminOnly = false }: ProtectedRouteProps) {
-  const { user, loading } = useAuth();
+  const { user, loading, userRole } = useAuth();
   const location = useLocation();
 
-  if (loading) return <RouteLoader />;
+  // Demo mode check — runs alongside Firebase auth
+  const demoActive = DEMO_MODE && isDemoSessionActive();
+
+  if (loading && !demoActive) return <RouteLoader />;
+
+  // Demo mode: skip Firebase auth requirement
+  if (demoActive) {
+    const demoRole = getDemoRole();
+    if (adminOnly && demoRole !== 'admin') {
+      return <AccessDenied />;
+    }
+    return <>{children}</>;
+  }
 
   if (!user) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 
-  if (adminOnly && !isAdminEmail(user.email)) {
+  if (adminOnly && !isAdminUser(userRole, user.email)) {
     return <AccessDenied />;
   }
 

@@ -1,21 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, setDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { Edit2, Trash2, Plus } from 'lucide-react';
-import type { Category } from '../../lib/types';
+import { Edit2, Trash2, Plus, ChevronDown, ChevronRight, Save, X } from 'lucide-react';
+import { L } from '../../lib/i18n';
+import type { MainCategory, SubCategory } from '../../lib/types';
 
 export default function AdminCategories() {
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [mainCategories, setMainCategories] = useState<MainCategory[]>([]);
+  const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
-  const [currentId, setCurrentId] = useState<string | null>(null);
-  const [customId, setCustomId] = useState('');
-  const [formData, setFormData] = useState({ title: '', description: '', color: '', icon: '', order: 0 });
+  // Main cat editing
+  const [editingMain, setEditingMain] = useState(false);
+  const [mainId, setMainId] = useState<string | null>(null);
+  const [mainForm, setMainForm] = useState({ title: '', description: '', color: '', order: 0 });
+  const [mainCustomId, setMainCustomId] = useState('');
+  // Sub cat editing
+  const [editingSub, setEditingSub] = useState(false);
+  const [subId, setSubId] = useState<string | null>(null);
+  const [subForm, setSubForm] = useState({ title: '', description: '', parentMainCategory: '' });
+  // Expanded accordion
+  const [expandedMain, setExpandedMain] = useState<string | null>(null);
 
-  const fetchCategories = async () => {
+  const fetchData = async () => {
     try {
-      const snap = await getDocs(collection(db, 'categories'));
-      setCategories((snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Category[]).sort((a, b) => (a.order || 0) - (b.order || 0)));
+      const mainSnap = await getDocs(collection(db, 'categories'));
+      setMainCategories((mainSnap.docs.map(d => ({ id: d.id, ...d.data() })) as MainCategory[]).sort((a, b) => (a.order || 0) - (b.order || 0)));
+
+      const subSnap = await getDocs(collection(db, 'subcategories'));
+      setSubCategories(subSnap.docs.map(d => ({ id: d.id, ...d.data() })) as SubCategory[]);
     } catch (error) {
       console.error(error);
     } finally {
@@ -23,111 +35,192 @@ export default function AdminCategories() {
     }
   };
 
-  useEffect(() => { fetchCategories(); }, []);
+  useEffect(() => { fetchData(); }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleMainSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const dbData = { ...formData, order: Number(formData.order) };
-      if (currentId) {
-        await updateDoc(doc(db, 'categories', currentId), dbData);
+      const data = { ...mainForm, order: Number(mainForm.order) };
+      if (mainId) {
+        await updateDoc(doc(db, 'categories', mainId), data);
       } else {
-        if (customId) {
-           await setDoc(doc(db, 'categories', customId), dbData);
-        } else {
-           await addDoc(collection(db, 'categories'), dbData);
-        }
+        if (mainCustomId) await setDoc(doc(db, 'categories', mainCustomId), data);
+        else await addDoc(collection(db, 'categories'), data);
       }
-      setIsEditing(false);
-      fetchCategories();
-      setFormData({ title: '', description: '', color: '', icon: '', order: 0 });
-      setCurrentId(null);
-      setCustomId('');
+      resetMainForm();
+      fetchData();
     } catch (error) {
       console.error(error);
-      alert('Error saving category');
+      alert('Error saving main category');
     }
   };
 
-  const handleEdit = (category: Category) => {
-    setFormData({ 
-      title: category.title, 
-      description: category.description, 
-      color: category.color || '', 
-      icon: category.icon || '', 
-      order: category.order || 0 
-    });
-    setCurrentId(category.id);
-    setIsEditing(true);
+  const resetMainForm = () => {
+    setEditingMain(false);
+    setMainId(null);
+    setMainForm({ title: '', description: '', color: '', order: 0 });
+    setMainCustomId('');
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Are you sure?')) {
-      try {
-        await deleteDoc(doc(db, 'categories', id));
-        fetchCategories();
-      } catch (error) {
-        console.error(error);
-        alert('Error deleting');
+  const handleMainDelete = async (id: string) => {
+    if (!confirm('Delete this main category and ALL its subcategories?')) return;
+    try {
+      // Delete related subcategories
+      const relSubs = subCategories.filter(s => s.parentMainCategory === mainCategories.find(m => m.id === id)?.title);
+      for (const s of relSubs) {
+        if (s.id) await deleteDoc(doc(db, 'subcategories', s.id));
       }
+      await deleteDoc(doc(db, 'categories', id));
+      fetchData();
+    } catch (error) {
+      console.error(error);
+      alert('Error deleting');
     }
   };
 
-  if (loading) return <div>Loading...</div>;
+  // Sub category handlers
+  const openAddSub = (mainTitle: string) => {
+    setEditingSub(true);
+    setSubId(null);
+    setSubForm({ title: '', description: '', parentMainCategory: mainTitle });
+  };
+
+  const handleSubSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (subId) {
+        await updateDoc(doc(db, 'subcategories', subId), subForm);
+      } else {
+        await addDoc(collection(db, 'subcategories'), subForm);
+      }
+      setEditingSub(false);
+      setSubId(null);
+      setSubForm({ title: '', description: '', parentMainCategory: '' });
+      fetchData();
+    } catch (error) {
+      console.error(error);
+      alert('Error saving subcategory');
+    }
+  };
+
+  const handleSubEdit = (sub: SubCategory) => {
+    setSubForm({ title: sub.title, description: sub.description || '', parentMainCategory: sub.parentMainCategory || '' });
+    setSubId(sub.id || null);
+    setEditingSub(true);
+  };
+
+  const handleSubDelete = async (id: string) => {
+    if (!confirm('Delete this subcategory?')) return;
+    try {
+      await deleteDoc(doc(db, 'subcategories', id));
+      fetchData();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const getSubsForMain = (mainTitle: string) => subCategories.filter(s => s.parentMainCategory === mainTitle);
+
+  if (loading) return <div className="text-slate-400">Loading categories...</div>;
 
   return (
     <div>
+      {/* Main Categories Header */}
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-white">Manage Categories</h2>
-        <button onClick={() => { setIsEditing(true); setCurrentId(null); setFormData({ title: '', description: '', color: '', icon: '', order: categories.length + 1 }); setCustomId(''); }} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded flex items-center gap-2">
-          <Plus className="h-4 w-4"/> Add Category
+        <div>
+          <h2 className="text-2xl font-bold text-white">{L.categories}</h2>
+          <p className="mt-1 text-xs text-slate-400">{L.catsHelp}</p>
+        </div>
+        <button onClick={() => { setEditingMain(true); setMainId(null); setMainForm({ title: '', description: '', color: '', order: mainCategories.length + 1 }); setMainCustomId(''); }} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold shadow-lg">
+          <Plus className="h-4 w-4"/> {L.add} Main Category
         </button>
       </div>
 
-      {isEditing ? (
+      {/* Main Category Form */}
+      {editingMain && (
         <div className="bg-white/5 p-6 rounded-2xl border border-white/10 mb-8">
-          <form onSubmit={handleSubmit} className="space-y-4 text-black">
-            {!currentId && (
-              <input placeholder="Custom ID (optional)" value={customId} onChange={e => setCustomId(e.target.value)} className="w-full p-2 border rounded text-slate-800" />
+          <h3 className="text-lg font-bold text-white mb-4">{mainId ? 'Edit' : 'New'} Main Category</h3>
+          <form onSubmit={handleMainSubmit} className="space-y-4 text-black">
+            {!mainId && (
+              <input placeholder="Custom ID (optional)" value={mainCustomId} onChange={e => setMainCustomId(e.target.value)} className="w-full p-2 border rounded text-slate-800" />
             )}
-            <input required placeholder="Title" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full p-2 border rounded text-slate-800" />
-            <input required placeholder="Short Description" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full p-2 border rounded text-slate-800" />
-            <input placeholder="Color Config (e.g. text-[#F59E0B])" value={formData.color} onChange={e => setFormData({...formData, color: e.target.value})} className="w-full p-2 border rounded text-slate-800" />
-            <input type="number" placeholder="Order" value={formData.order} onChange={e => setFormData({...formData, order: Number(e.target.value)})} className="w-full p-2 border rounded text-slate-800" />
-            
+            <input required placeholder="Title (e.g. Academic Maths)" value={mainForm.title} onChange={e => setMainForm({...mainForm, title: e.target.value})} className="w-full p-2 border rounded text-slate-800" />
+            <input required placeholder="Short Description" value={mainForm.description} onChange={e => setMainForm({...mainForm, description: e.target.value})} className="w-full p-2 border rounded text-slate-800" />
+            <input placeholder="Color Config (e.g. text-[#F59E0B])" value={mainForm.color} onChange={e => setMainForm({...mainForm, color: e.target.value})} className="w-full p-2 border rounded text-slate-800" />
+            <input type="number" placeholder="Order" value={mainForm.order} onChange={e => setMainForm({...mainForm, order: Number(e.target.value)})} className="w-full p-2 border rounded text-slate-800" />
             <div className="flex gap-4 pt-4">
               <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">Save</button>
-              <button type="button" onClick={() => setIsEditing(false)} className="bg-slate-600 text-white px-4 py-2 rounded">Cancel</button>
+              <button type="button" onClick={resetMainForm} className="bg-slate-600 text-white px-4 py-2 rounded">Cancel</button>
             </div>
           </form>
         </div>
-      ) : (
-        <div className="bg-white/5 rounded-2xl border border-white/10 overflow-hidden">
-          <table className="w-full text-left text-white">
-            <thead className="bg-black/20">
-              <tr>
-                <th className="p-4">Title</th>
-                <th className="p-4">Description</th>
-                <th className="p-4">Order</th>
-                <th className="p-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {categories.map(category => (
-                <tr key={category.id} className="border-b border-white/5">
-                  <td className="p-4 font-bold">{category.title}</td>
-                  <td className="p-4 text-slate-400">{category.description}</td>
-                  <td className="p-4">{category.order}</td>
-                  <td className="p-4 flex gap-2 justify-end">
-                    <button onClick={() => handleEdit(category)} className="p-2 text-blue-400 hover:bg-blue-400/10 rounded"><Edit2 className="h-4 w-4" /></button>
-                    <button onClick={() => handleDelete(category.id)} className="p-2 text-red-400 hover:bg-red-400/10 rounded"><Trash2 className="h-4 w-4" /></button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      )}
+
+      {/* Sub Category Form */}
+      {editingSub && (
+        <div className="bg-white/5 p-6 rounded-2xl border border-indigo-500/30 mb-8">
+          <h3 className="text-lg font-bold text-white mb-4">{subId ? 'Edit' : 'New'} Subcategory</h3>
+          <form onSubmit={handleSubSubmit} className="space-y-4 text-black">
+            <input required placeholder="Subcategory Title (e.g. O Level)" value={subForm.title} onChange={e => setSubForm({...subForm, title: e.target.value})} className="w-full p-2 border rounded text-slate-800" />
+            <input placeholder="Description (optional)" value={subForm.description} onChange={e => setSubForm({...subForm, description: e.target.value})} className="w-full p-2 border rounded text-slate-800" />
+            <select required value={subForm.parentMainCategory} onChange={e => setSubForm({...subForm, parentMainCategory: e.target.value})} className="w-full p-2 border rounded text-slate-800">
+              <option value="">Select Parent Main Category</option>
+              {mainCategories.map(m => (<option key={m.id} value={m.title}>{m.title}</option>))}
+            </select>
+            <div className="flex gap-4 pt-4">
+              <button type="submit" className="bg-indigo-600 text-white px-4 py-2 rounded">Save</button>
+              <button type="button" onClick={() => { setEditingSub(false); setSubId(null); setSubForm({ title: '', description: '', parentMainCategory: '' }); }} className="bg-slate-600 text-white px-4 py-2 rounded">Cancel</button>
+            </div>
+          </form>
         </div>
       )}
+
+      {/* Accordion List */}
+      <div className="space-y-4">
+        {mainCategories.map(main => {
+          const subs = getSubsForMain(main.title);
+          const isExpanded = expandedMain === main.id;
+          return (
+            <div key={main.id} className="bg-white/5 rounded-2xl border border-white/10 overflow-hidden">
+              <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors" onClick={() => setExpandedMain(isExpanded ? null : main.id)}>
+                <div className="flex items-center gap-3">
+                  {isExpanded ? <ChevronDown className="h-5 w-5 text-slate-400" /> : <ChevronRight className="h-5 w-5 text-slate-400" />}
+                  <div>
+                    <span className={`font-bold text-white ${main.color || ''}`}>{main.title}</span>
+                    <span className="text-slate-500 text-sm ml-2">{main.description}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-slate-500 bg-black/30 px-2 py-1 rounded">{subs.length} subs</span>
+                  <button onClick={(e) => { e.stopPropagation(); handleMainDelete(main.id); }} className="p-1.5 text-red-400 hover:bg-red-400/10 rounded"><Trash2 className="h-4 w-4" /></button>
+                  <button onClick={(e) => { e.stopPropagation(); setEditingMain(true); setMainId(main.id); setMainForm({ title: main.title, description: main.description, color: main.color || '', order: main.order || 0 }); }} className="p-1.5 text-blue-400 hover:bg-blue-400/10 rounded"><Edit2 className="h-4 w-4" /></button>
+                </div>
+              </div>
+
+              {isExpanded && (
+                <div className="border-t border-white/10 p-4 pl-12">
+                  {subs.length === 0 && <p className="text-slate-500 text-sm mb-3">No subcategories yet.</p>}
+                  {subs.map(sub => (
+                    <div key={sub.id} className="flex items-center justify-between py-2 px-3 hover:bg-white/5 rounded-lg group">
+                      <div>
+                        <span className="text-white text-sm font-medium">{sub.title}</span>
+                        {sub.description && <span className="text-slate-500 text-xs ml-2">{sub.description}</span>}
+                      </div>
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => handleSubEdit(sub)} className="p-1 text-blue-400 hover:bg-blue-400/10 rounded"><Edit2 className="h-3.5 w-3.5" /></button>
+                        <button onClick={() => sub.id && handleSubDelete(sub.id)} className="p-1 text-red-400 hover:bg-red-400/10 rounded"><Trash2 className="h-3.5 w-3.5" /></button>
+                      </div>
+                    </div>
+                  ))}
+                  <button onClick={() => openAddSub(main.title)} className="mt-3 flex items-center gap-1 text-indigo-400 hover:text-indigo-300 text-sm font-medium">
+                    <Plus className="h-3.5 w-3.5" /> Add Subcategory
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

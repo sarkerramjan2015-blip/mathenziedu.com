@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { BookOpen, AlertCircle } from 'lucide-react';
-import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, sendPasswordResetEmail } from 'firebase/auth';
+import { BookOpen, AlertCircle, Eye, Shield, User } from 'lucide-react';
+import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth } from '../lib/firebase';
+import { DEMO_MODE, DEMO_STUDENT, DEMO_ADMIN, DEMO_STUDENT_PASSWORD, DEMO_ADMIN_PASSWORD, startDemoSession } from '../lib/demo';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -40,18 +41,13 @@ export default function Login() {
     }
   };
 
-  const handlePasswordReset = async () => {
-    if (!email) {
-      setError('Enter your email first, then request a reset link.');
-      return;
-    }
-
-    try {
-      await sendPasswordResetEmail(auth, email);
-      setError('');
-      setStatus('Password reset email sent. Check your inbox.');
-    } catch (err: any) {
-      setError(err.message || 'Failed to send password reset email');
+  const handleDemoLogin = (role: 'student' | 'admin') => {
+    const user = role === 'admin' ? DEMO_ADMIN : DEMO_STUDENT;
+    startDemoSession(user, role);
+    if (role === 'admin') {
+      navigate('/admin');
+    } else {
+      navigate('/dashboard');
     }
   };
 
@@ -79,6 +75,35 @@ export default function Login() {
           {status && (
             <div className="bg-[#10B981]/10 border border-[#10B981]/40 text-[#10B981] p-3 rounded-xl mb-6 flex items-center gap-2 text-sm">
               {status}
+            </div>
+          )}
+
+          {/* Demo Mode Section */}
+          {DEMO_MODE && (
+            <div className="mb-8 -mx-2 p-4 rounded-2xl bg-purple-500/10 border border-purple-500/30">
+              <div className="flex items-center gap-2 mb-3">
+                <Eye className="h-4 w-4 text-purple-400" />
+                <span className="text-xs font-bold uppercase tracking-wider text-purple-400">Demo Access — Local Preview Only</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => handleDemoLogin('student')}
+                  className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-white/10 border border-white/10 hover:bg-white/20 hover:border-[#10B981]/40 transition-all group"
+                >
+                  <User className="h-5 w-5 text-[#10B981] group-hover:scale-110 transition-transform" />
+                  <span className="text-xs font-bold text-white">Demo Student</span>
+                  <span className="text-[9px] text-slate-400">{DEMO_STUDENT_PASSWORD}</span>
+                </button>
+                <button
+                  onClick={() => handleDemoLogin('admin')}
+                  className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-white/10 border border-white/10 hover:bg-white/20 hover:border-[#F59E0B]/40 transition-all group"
+                >
+                  <Shield className="h-5 w-5 text-[#F59E0B] group-hover:scale-110 transition-transform" />
+                  <span className="text-xs font-bold text-white">Demo Admin</span>
+                  <span className="text-[9px] text-slate-400">{DEMO_ADMIN_PASSWORD}</span>
+                </button>
+              </div>
+              <p className="text-[9px] text-slate-500 mt-3 text-center">Demo passwords shown above are for UI reference only. No real Firebase login required.</p>
             </div>
           )}
 
@@ -120,7 +145,7 @@ export default function Login() {
               </div>
 
               <div className="text-sm">
-                <button type="button" onClick={handlePasswordReset} className="font-medium text-[#2563EB] hover:text-blue-400">Forgot password?</button>
+                <Link to="/forgot-password" className="font-medium text-[#2563EB] hover:text-blue-400">Forgot password?</Link>
               </div>
             </div>
 
