@@ -31,31 +31,27 @@ export interface DemoUser {
 const ADMIN_EMAILS = new Set([
   'demo.admin@gmail.com',
   'admin@gmail.com',
-  'demo.admin@mathemzi.edu',
-]);
-
-const STUDENT_EMAILS = new Set([
-  'demo.student@gmail.com',
-  'student@gmail.com',
-  'demo.student@mathemzi.edu',
+  'mathemziedu.admin@gmail.com',
 ]);
 
 export function isAdminEmail(email: string): boolean {
   return ADMIN_EMAILS.has(email.toLowerCase().trim());
 }
 
-export function isStudentEmail(email: string): boolean {
-  return STUDENT_EMAILS.has(email.toLowerCase().trim());
+export function isGmail(email: string): boolean {
+  return email.toLowerCase().trim().endsWith('@gmail.com');
 }
 
 export function loginWithSimpleEmail(email: string): void {
   const normalized = email.toLowerCase().trim();
   const isAdmin = isAdminEmail(normalized);
   const role = isAdmin ? 'admin' : 'student';
-  const name = isAdmin ? 'Demo Admin' : (normalized.split('@')[0] || 'Demo Student');
+  const name = isAdmin ? 'Admin' : (normalized.split('@')[0] || 'Student');
+
+  const uid = `simple-${normalized.replace(/[^a-z0-9]/g, '-')}`;
 
   const user: DemoUser = {
-    uid: isAdmin ? 'demo-admin-user' : `demo-${normalized.replace(/[^a-z0-9]/g, '-')}`,
+    uid,
     email: normalized,
     displayName: name,
     photoURL: null,
@@ -69,7 +65,7 @@ export function loginWithSimpleEmail(email: string): void {
 
 export const DEMO_STUDENT: DemoUser = {
   uid: 'demo-student-user',
-  email: 'demo.student@mathemzi.edu',
+  email: 'demo.student@gmail.com',
   displayName: 'Demo Student',
   photoURL: null,
   isDemo: true,
@@ -77,7 +73,7 @@ export const DEMO_STUDENT: DemoUser = {
 
 export const DEMO_ADMIN: DemoUser = {
   uid: 'demo-admin-user',
-  email: 'demo.admin@mathemzi.edu',
+  email: 'demo.admin@gmail.com',
   displayName: 'Demo Admin',
   photoURL: null,
   isDemo: true,
@@ -94,7 +90,7 @@ export function isDemoSessionActive(): boolean {
 }
 
 export function getDemoUser(): DemoUser | null {
-  if (!DEMO_MODE) return null;
+  if (!DEMO_MODE && !SIMPLE_EMAIL_LOGIN) return null;
   const raw = localStorage.getItem(DEMO_USER_KEY);
   if (!raw) return null;
   try {
@@ -105,7 +101,7 @@ export function getDemoUser(): DemoUser | null {
 }
 
 export function getDemoRole(): string | null {
-  if (!DEMO_MODE) return null;
+  if (!DEMO_MODE && !SIMPLE_EMAIL_LOGIN) return null;
   return localStorage.getItem(DEMO_ROLE_KEY);
 }
 

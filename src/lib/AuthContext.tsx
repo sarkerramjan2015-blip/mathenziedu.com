@@ -2,7 +2,9 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from './firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { DEMO_MODE, isDemoSessionActive, getDemoUser, getDemoRole } from './demo';
+import { DEMO_MODE, SIMPLE_EMAIL_LOGIN, isDemoSessionActive, getDemoUser, getDemoRole } from './demo';
+
+const INITIAL_ADMIN_EMAIL = import.meta.env.VITE_INITIAL_ADMIN_EMAIL || 'sarkerramjan2015@gmail.com';
 
 interface AuthContextType {
   user: User | null;
@@ -27,8 +29,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isDemo, setIsDemo] = useState(false);
 
   useEffect(() => {
-    // Check for demo session first
-    if (DEMO_MODE && isDemoSessionActive()) {
+    // Check for demo/simple email session first
+    if ((DEMO_MODE || SIMPLE_EMAIL_LOGIN) && isDemoSessionActive()) {
       const demoUser = getDemoUser();
       const demoRole = getDemoRole();
       if (demoUser) {
@@ -63,21 +65,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
       if (firebaseUser) {
+        const userEmail = firebaseUser.email || '';
+        const isInitialAdmin = userEmail === INITIAL_ADMIN_EMAIL;
+        const role = isInitialAdmin ? 'admin' : 'student';
         try {
           const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
           if (!userDoc.exists()) {
             await setDoc(doc(db, 'users', firebaseUser.uid), {
               userId: firebaseUser.uid,
               displayName: firebaseUser.displayName || '',
-              email: firebaseUser.email || '',
-              role: 'student',
+              email: userEmail,
+              role,
             });
-            setUserRole('student');
           } else {
-            setUserRole(userDoc.data()?.role || 'student');
+            // Update role if this is the initial admin email
+            if (isInitialAdmin && userDoc.data()?.role !== 'admin') {
+              await setDoc(doc(db, 'users', firebaseUser.uid), { role: 'admin' }, { merge: true });
+            }
           }
+          setUserRole(role);
         } catch (error) {
           console.error("Error setting up user doc", error);
+          // Fallback: still set role if admin email
+          setUserRole(role);
         }
       } else {
         setUserRole(null);

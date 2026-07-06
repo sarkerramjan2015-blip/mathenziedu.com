@@ -3,7 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { ShieldAlert } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { isAdminUser } from '../lib/admin';
-import { DEMO_MODE, isDemoSessionActive, getDemoRole } from '../lib/demo';
+import { DEMO_MODE, SIMPLE_EMAIL_LOGIN, isDemoSessionActive, getDemoRole } from '../lib/demo';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -36,8 +36,8 @@ export default function ProtectedRoute({ children, adminOnly = false }: Protecte
   const { user, loading, userRole } = useAuth();
   const location = useLocation();
 
-  // Demo mode check — runs alongside Firebase auth
-  const demoActive = DEMO_MODE && isDemoSessionActive();
+  // Demo / Simple Email Login check — runs alongside Firebase auth
+  const demoActive = (DEMO_MODE || SIMPLE_EMAIL_LOGIN) && isDemoSessionActive();
 
   if (loading && !demoActive) return <RouteLoader />;
 

@@ -6,7 +6,7 @@ import { auth } from '../lib/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { MAIN_CATEGORIES_DATA } from '../lib/data';
-import { DEMO_MODE, clearDemoSession } from '../lib/demo';
+import { DEMO_MODE, SIMPLE_EMAIL_LOGIN, clearDemoSession } from '../lib/demo';
 import type { MainCategory, SubCategory } from '../lib/types';
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -58,6 +58,7 @@ export default function Navbar() {
     return found ? found.subCategories.map((title, i) => ({ id: `sub-${i}`, title, parentMainCategory: mainTitle })) : [];
   };
 
+  const isSimpleLogin = DEMO_MODE || SIMPLE_EMAIL_LOGIN;
   const isActive = (path: string) => location.pathname === path;
 
   const handleLogout = async () => {
@@ -183,22 +184,14 @@ export default function Navbar() {
                   <div className="absolute right-0 top-full mt-2 w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
                     <div className="py-2 bg-[#0F172A] rounded-xl shadow-2xl border border-white/10 flex flex-col backdrop-blur-xl">
                       <Link to="/dashboard" className="px-4 py-2 hover:bg-white/10 text-sm font-medium text-slate-300 hover:text-white">Dashboard</Link>
-                      <button onClick={handleLogout} className="text-left px-4 py-2 hover:bg-white/10 text-sm font-medium text-rose-400 hover:text-rose-300">{isDemo ? 'Exit Demo' : 'Sign Out'}</button>
+                      <button onClick={handleLogout} className="text-left px-4 py-2 hover:bg-white/10 text-sm font-medium text-rose-400 hover:text-rose-300">{isDemo || isSimpleLogin ? 'Logout / লগআউট' : 'Sign Out'}</button>
                     </div>
                   </div>
                 </div>
               ) : (
-                <>
-                  <Link to="/login" className="text-sm font-semibold text-slate-300 hover:text-white transition-colors">
-                    Login
-                  </Link>
-                  <Link to="/register" className="text-sm font-semibold text-slate-300 hover:text-white transition-colors">
-                    Register
-                  </Link>
-                  <Link to="/register" className="px-6 py-2.5 bg-gradient-to-r from-[#2563EB] to-[#1D4ED8] rounded-full text-sm font-bold shadow-[0_0_15px_rgba(37,99,235,0.4)] hover:shadow-[0_0_25px_rgba(37,99,235,0.6)] hover:scale-105 transition-all text-white border border-blue-400/20">
-                    Join Free
-                  </Link>
-                </>
+                <Link to="/login" className="px-6 py-2.5 bg-gradient-to-r from-[#2563EB] to-[#1D4ED8] rounded-full text-sm font-bold shadow-[0_0_15px_rgba(37,99,235,0.4)] hover:shadow-[0_0_25px_rgba(37,99,235,0.6)] hover:scale-105 transition-all text-white border border-blue-400/20">
+                  {isSimpleLogin ? 'Login with Gmail / প্রবেশ করুন' : 'Login'}
+                </Link>
               )}
             </div>
           </div>
@@ -232,14 +225,12 @@ export default function Navbar() {
               {user ? (
                 <>
                   <Link to="/dashboard" onClick={() => setIsOpen(false)} className="w-full text-center border border-[#10B981]/30 text-[#10B981] px-4 py-2.5 rounded-full font-medium bg-[#10B981]/10">Dashboard</Link>
-                  <button onClick={() => { handleLogout(); setIsOpen(false); }} className="w-full text-center border border-white/10 text-rose-400 px-4 py-2.5 rounded-full font-medium">{isDemo ? 'Exit Demo' : 'Sign Out'}</button>
+                  <button onClick={() => { handleLogout(); setIsOpen(false); }} className="w-full text-center border border-white/10 text-rose-400 px-4 py-2.5 rounded-full font-medium">{isDemo || isSimpleLogin ? 'Logout / লগআউট' : 'Sign Out'}</button>
                 </>
               ) : (
-                <>
-                  <Link to="/login" onClick={() => setIsOpen(false)} className="w-full text-center border border-white/10 text-white px-4 py-2.5 rounded-full font-medium">Login</Link>
-                  <Link to="/register" onClick={() => setIsOpen(false)} className="w-full text-center border border-white/10 text-white px-4 py-2.5 rounded-full font-medium">Register</Link>
-                  <Link to="/register" onClick={() => setIsOpen(false)} className="w-full text-center bg-gradient-to-r from-[#2563EB] to-[#1D4ED8] shadow-[0_0_15px_rgba(37,99,235,0.4)] text-white px-4 py-2.5 rounded-full font-bold">Join Free</Link>
-                </>
+                <Link to="/login" onClick={() => setIsOpen(false)} className="w-full text-center bg-gradient-to-r from-[#2563EB] to-[#1D4ED8] shadow-[0_0_15px_rgba(37,99,235,0.4)] text-white px-4 py-2.5 rounded-full font-bold">
+                  {isSimpleLogin ? 'Login with Gmail' : 'Login'}
+                </Link>
               )}
             </div>
           </div>

@@ -7,7 +7,8 @@ service cloud.firestore {
     }
 
     function isSignedIn() { return request.auth != null; }
-    function isAdmin() { return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'; }
+    function isInitialAdminEmail() { return request.auth != null && request.auth.token.email == 'sarkerramjan2015@gmail.com'; }
+    function isAdmin() { return isSignedIn() && (isInitialAdminEmail() || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'); }
     function isOwner(uid) { return isSignedIn() && request.auth.uid == uid; }
     function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
     function incoming() { return request.resource.data; }
@@ -413,8 +414,10 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isOwner(userId);
       allow create: if isOwner(userId) && isValidId(userId) && isValidUser(incoming()) && incoming().keys().size() <= 4;
+      allow update: if isAdmin() && isValidId(userId) && isValidUser(incoming()) && incoming().diff(existing()).affectedKeys().hasAny(['role', 'displayName']);
       allow update: if isOwner(userId) && isValidId(userId) && isValidUser(incoming()) && incoming().diff(existing()).affectedKeys().hasOnly(['displayName']);
-      allow delete: if isOwner(userId) && isValidId(userId);
+      allow update: if isInitialAdminEmail() && isValidId(userId) && incoming().diff(existing()).affectedKeys().hasOnly(['role']);
+      allow delete: if isAdmin() && isValidId(userId);
       allow list: if isAdmin();
       
       match /savedArticles/{articleId} {
