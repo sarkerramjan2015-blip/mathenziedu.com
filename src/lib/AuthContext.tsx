@@ -67,7 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (firebaseUser) {
         const userEmail = firebaseUser.email || '';
         const isInitialAdmin = userEmail === INITIAL_ADMIN_EMAIL;
-        const role = isInitialAdmin ? 'admin' : 'student';
+        const defaultRole = isInitialAdmin ? 'admin' : 'student';
         try {
           const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
           if (!userDoc.exists()) {
@@ -75,19 +75,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               userId: firebaseUser.uid,
               displayName: firebaseUser.displayName || '',
               email: userEmail,
-              role,
+              role: defaultRole,
             });
+            setUserRole(defaultRole);
           } else {
-            // Update role if this is the initial admin email
-            if (isInitialAdmin && userDoc.data()?.role !== 'admin') {
+            const firestoreRole = userDoc.data()?.role;
+            const finalRole = isInitialAdmin ? 'admin' : (typeof firestoreRole === 'string' && firestoreRole ? firestoreRole : 'student');
+            if (isInitialAdmin && firestoreRole !== 'admin') {
               await setDoc(doc(db, 'users', firebaseUser.uid), { role: 'admin' }, { merge: true });
             }
+            setUserRole(finalRole);
           }
-          setUserRole(role);
         } catch (error) {
           console.error("Error setting up user doc", error);
           // Fallback: still set role if admin email
-          setUserRole(role);
+          setUserRole(defaultRole);
         }
       } else {
         setUserRole(null);

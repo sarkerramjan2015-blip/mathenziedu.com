@@ -20,6 +20,7 @@ export default function BkashPaymentSection({ order, userId, userEmail, onSubmit
   const bkashAccountType = cfg.bkashAccountType;
   const bkashInstructions = cfg.bkashInstructions;
   const bkashNote = cfg.paymentNote;
+  const isBkashConfigured = bkashNumber.trim() !== '' && bkashNumber !== BKASH_MANUAL.number;
   const [senderNumber, setSenderNumber] = useState('');
   const [transactionId, setTransactionId] = useState('');
   const [paymentNote, setPaymentNote] = useState('');
@@ -29,6 +30,10 @@ export default function BkashPaymentSection({ order, userId, userEmail, onSubmit
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isBkashConfigured) {
+      setError('bKash number is not configured yet. Please contact support before paying.');
+      return;
+    }
     if (!senderNumber.trim() || !transactionId.trim()) {
       setError('Please fill in your bKash number and transaction ID.');
       return;
@@ -115,11 +120,15 @@ export default function BkashPaymentSection({ order, userId, userEmail, onSubmit
         <div className="bg-black/30 rounded-xl p-4 border border-white/5">
           <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">bKash Number</div>
           <div className="flex items-center justify-between">
-            <span className="text-lg font-bold text-white font-mono">{bkashNumber}</span>
-            <button onClick={() => navigator.clipboard.writeText(bkashNumber)}
-              className="text-[#E2136E] hover:text-[#E2136E]/80 p-1" title="Copy number">
-              <Copy className="h-4 w-4" />
-            </button>
+            <span className={`text-lg font-bold font-mono ${isBkashConfigured ? 'text-white' : 'text-[#F59E0B]'}`}>
+              {isBkashConfigured ? bkashNumber : 'Not configured yet'}
+            </span>
+            {isBkashConfigured && (
+              <button onClick={() => navigator.clipboard.writeText(bkashNumber)}
+                className="text-[#E2136E] hover:text-[#E2136E]/80 p-1" title="Copy number">
+                <Copy className="h-4 w-4" />
+              </button>
+            )}
           </div>
           <div className="text-[10px] text-slate-500 mt-1">{bkashAccountType}</div>
         </div>
@@ -145,7 +154,7 @@ export default function BkashPaymentSection({ order, userId, userEmail, onSubmit
 
       <p className="text-[10px] text-slate-500 mb-5 bg-white/5 p-3 rounded-lg border border-white/5">
         <AlertCircle className="h-3 w-3 inline mr-1 text-[#F59E0B]" />
-        {bkashNote}
+        {isBkashConfigured ? bkashNote : 'bKash number is not configured yet. Please contact support before sending any payment.'}
       </p>
 
       {/* Submission Form */}
@@ -175,7 +184,7 @@ export default function BkashPaymentSection({ order, userId, userEmail, onSubmit
           </div>
         )}
 
-        <button type="submit" disabled={submitting}
+        <button type="submit" disabled={submitting || !isBkashConfigured}
           className="w-full bg-[#E2136E] hover:bg-[#c0105a] text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-[#E2136E]/20 flex items-center justify-center gap-2 disabled:opacity-50">
           {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Submitting...</> : <><Send className="h-4 w-4" /> Submit Transaction ID</>}
         </button>

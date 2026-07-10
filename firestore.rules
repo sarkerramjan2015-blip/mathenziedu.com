@@ -414,7 +414,7 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isOwner(userId);
       allow create: if isOwner(userId) && isValidId(userId) && isValidUser(incoming()) && incoming().keys().size() <= 4;
-      allow update: if isAdmin() && isValidId(userId) && isValidUser(incoming()) && incoming().diff(existing()).affectedKeys().hasAny(['role', 'displayName']);
+      allow update: if isAdmin() && isValidId(userId) && isValidUser(incoming()) && incoming().diff(existing()).affectedKeys().hasOnly(['role', 'displayName']);
       allow update: if isOwner(userId) && isValidId(userId) && isValidUser(incoming()) && incoming().diff(existing()).affectedKeys().hasOnly(['displayName']);
       allow update: if isInitialAdminEmail() && isValidId(userId) && incoming().diff(existing()).affectedKeys().hasOnly(['role']);
       allow delete: if isAdmin() && isValidId(userId);
