@@ -11,7 +11,7 @@ interface SEOProps {
 }
 
 const SITE_NAME = 'Mathemzi Edu';
-const BASE_URL = 'https://mathemziedu.com';
+const BASE_URL = (import.meta.env.VITE_SITE_URL || 'https://mathemziedu.vercel.app').replace(/\/$/, '');
 const DEFAULT_OG_IMAGE = `${BASE_URL}/og.png`;
 
 export default function SEO({ 

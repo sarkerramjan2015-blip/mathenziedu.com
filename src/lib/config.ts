@@ -7,7 +7,7 @@ export const SITE_CONFIG = {
   tagline: 'Master Mathematics with Logic, Practice & Confidence',
   banglaTagline: 'গণিত হোক সহজ, যুক্তিতে হোক শক্তিশালী',
   description: 'A premium Bangladesh-focused mathematics learning ecosystem for school students, O Level/A Level learners, olympiad aspirants, and admission candidates. Structured courses, practice exams, books, progress tracking, and expert-guided learning.',
-  url: 'https://mathemziedu.com',
+  url: (import.meta.env.VITE_SITE_URL || 'https://mathemziedu.vercel.app').replace(/\/$/, ''),
   email: 'support@mathemziedu.com',
   phone: '+880 1700 000000',
   address: 'Dhaka, Bangladesh',
