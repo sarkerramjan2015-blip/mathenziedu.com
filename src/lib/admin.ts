@@ -6,15 +6,19 @@ const INITIAL_ADMIN_EMAIL = import.meta.env.VITE_INITIAL_ADMIN_EMAIL || 'sarkerr
  * Check if a user has admin role (Firestore-based).
  * Falls back to initial admin email and legacy email check.
  */
-export function isAdminUser(role: string | null | undefined, email?: string | null): boolean {
+export function isAdminUser(
+  role: string | null | undefined,
+  email?: string | null,
+  emailVerified = false,
+): boolean {
   // Primary: Firestore role check
   if (role === 'admin') return true;
   
   // Bootstrap: initial admin email (auto-promoted by AuthContext)
-  if (email === INITIAL_ADMIN_EMAIL) return true;
+  if (emailVerified && email === INITIAL_ADMIN_EMAIL) return true;
   
   // Fallback: legacy hardcoded email (for migration period)
-  if (email && LEGACY_ADMIN_EMAILS.has(email)) return true;
+  if (emailVerified && email && LEGACY_ADMIN_EMAILS.has(email)) return true;
   
   return false;
 }

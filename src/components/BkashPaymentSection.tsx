@@ -38,7 +38,12 @@ export default function BkashPaymentSection({ order, userId, userEmail, onSubmit
       setError('Please fill in your bKash number and transaction ID.');
       return;
     }
-    if (transactionId.trim().length < 5) {
+    const normalizedSenderNumber = senderNumber.replace(/[\s-]/g, '');
+    if (!/^01[3-9]\d{8}$/.test(normalizedSenderNumber)) {
+      setError('Enter a valid 11-digit Bangladeshi mobile number.');
+      return;
+    }
+    if (!/^[A-Za-z0-9]{6,24}$/.test(transactionId.trim())) {
       setError('Please enter a valid transaction ID.');
       return;
     }
@@ -54,8 +59,8 @@ export default function BkashPaymentSection({ order, userId, userEmail, onSubmit
         userId,
         userEmail,
         amount: order.amount,
-        senderBkashNumber: senderNumber.trim(),
-        transactionId: transactionId.trim(),
+        senderBkashNumber: normalizedSenderNumber,
+        transactionId: transactionId.trim().toUpperCase(),
         paymentNote: paymentNote.trim(),
         status: 'submitted' as const,
         submittedAt: Date.now(),
@@ -72,8 +77,8 @@ export default function BkashPaymentSection({ order, userId, userEmail, onSubmit
           userId,
           userEmail,
           amount: order.amount,
-          senderBkashNumber: senderNumber.trim(),
-          transactionId: transactionId.trim(),
+          senderBkashNumber: normalizedSenderNumber,
+          transactionId: transactionId.trim().toUpperCase(),
           status: 'submitted',
           submittedAt: Date.now(),
         } as any);
@@ -161,19 +166,19 @@ export default function BkashPaymentSection({ order, userId, userEmail, onSubmit
       <form onSubmit={handleSubmit} className="space-y-3">
         <div>
           <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Your bKash Number *</label>
-          <input required value={senderNumber} onChange={e => setSenderNumber(e.target.value)}
+          <input required type="tel" inputMode="numeric" autoComplete="tel" maxLength={15} value={senderNumber} onChange={e => setSenderNumber(e.target.value)}
             placeholder="01XXXXXXXXX"
             className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-2.5 text-sm text-white outline-none focus:border-[#E2136E] focus:ring-1 focus:ring-[#E2136E] placeholder:text-slate-600" />
         </div>
         <div>
           <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">bKash Transaction ID (TrxID) *</label>
-          <input required value={transactionId} onChange={e => setTransactionId(e.target.value)}
+          <input required autoCapitalize="characters" maxLength={24} value={transactionId} onChange={e => setTransactionId(e.target.value)}
             placeholder="e.g. TR123456ABCD"
             className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-2.5 text-sm text-white outline-none focus:border-[#E2136E] focus:ring-1 focus:ring-[#E2136E] placeholder:text-slate-600 font-mono" />
         </div>
         <div>
           <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Note (optional)</label>
-          <input value={paymentNote} onChange={e => setPaymentNote(e.target.value)}
+          <input maxLength={500} value={paymentNote} onChange={e => setPaymentNote(e.target.value)}
             placeholder="Any reference or note"
             className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-2.5 text-sm text-white outline-none focus:border-[#E2136E] focus:ring-1 focus:ring-[#E2136E] placeholder:text-slate-600" />
         </div>

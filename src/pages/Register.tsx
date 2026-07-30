@@ -2,13 +2,17 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { BookOpen, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { createUserWithEmailAndPassword, updateProfile, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile, signInWithPopup, GoogleAuthProvider, sendEmailVerification } from 'firebase/auth';
+import { FirebaseError } from 'firebase/app';
 import { auth } from '../lib/firebase';
 
 export default function Register() {
   const navigate = useNavigate();
   const location = useLocation();
-  const redirectTo = (location.state as { from?: string } | null)?.from || '/dashboard';
+  const requestedPath = (location.state as { from?: unknown } | null)?.from;
+  const redirectTo = typeof requestedPath === 'string' && requestedPath.startsWith('/') && !requestedPath.startsWith('//')
+    ? requestedPath
+    : '/dashboard';
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -80,11 +84,23 @@ export default function Register() {
         await updateProfile(userCredential.user, {
           displayName: formData.name
         });
+        try {
+          await sendEmailVerification(userCredential.user);
+        } catch {
+          // The dashboard offers a resend action if email delivery is temporarily unavailable.
+        }
         
         // Auth observer in Context will handle creating the user document, but we can update it early if needed
-        navigate(redirectTo);
-      } catch (err: any) {
-        setServerError(err.message || 'Failed to create account');
+        navigate(redirectTo, { state: { accountCreated: true } });
+      } catch (err) {
+        const code = err instanceof FirebaseError ? err.code : '';
+        setServerError(
+          code === 'auth/email-already-in-use'
+            ? 'An account already exists for this email. Please sign in instead.'
+            : code === 'auth/weak-password'
+              ? 'Choose a stronger password with at least 8 characters.'
+              : 'Could not create your account. Please try again.',
+        );
       } finally {
         setIsSubmitting(false);
       }
@@ -97,8 +113,9 @@ export default function Register() {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
       navigate(redirectTo);
-    } catch (err: any) {
-      setServerError(err.message || 'Failed to sign in with Google');
+    } catch (err) {
+      const code = err instanceof FirebaseError ? err.code : '';
+      setServerError(code === 'auth/popup-closed-by-user' ? 'Google sign-in was cancelled.' : 'Could not sign in with Google. Please try again.');
     }
   };
 

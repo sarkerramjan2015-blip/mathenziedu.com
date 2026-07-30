@@ -3,12 +3,14 @@ import { BookOpen, FileText, LogOut, PlayCircle, CreditCard, AlertCircle, CheckC
 import { courses as dummyCourses } from '../lib/data';
 import { useAuth } from '../lib/AuthContext';
 import { auth } from '../lib/firebase';
+import { sendEmailVerification } from 'firebase/auth';
 import { useNavigate, Link } from 'react-router-dom';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import UserSavedArticles from '../components/UserSavedArticles';
 import { isAdminUser } from '../lib/admin';
 import { applyImageFallback, imageWithFallback } from '../lib/media';
+import { getCourseCover } from '../lib/courseCovers';
 import { DEMO_MODE, clearDemoSession, getDemoLocalData } from '../lib/demo';
 import SEO from '../components/SEO';
 import type { Enrollment, Order, PaymentSubmission, ExamAttempt, WrittenSubmission, CourseProgress, Certificate } from '../lib/types';
@@ -39,6 +41,7 @@ export default function Dashboard() {
   const [courseProgressData, setCourseProgressData] = useState<CourseProgress[]>([]);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [loadingEnroll, setLoadingEnroll] = useState(true);
+  const [verificationStatus, setVerificationStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
 
   useEffect(() => {
     if (!user) return;
@@ -94,6 +97,17 @@ export default function Dashboard() {
     navigate('/');
   };
 
+  const resendVerification = async () => {
+    if (!auth.currentUser) return;
+    setVerificationStatus('sending');
+    try {
+      await sendEmailVerification(auth.currentUser);
+      setVerificationStatus('sent');
+    } catch {
+      setVerificationStatus('error');
+    }
+  };
+
   const activeEnrollments = enrollments.filter(e => e.status === 'active');
   const pendingEnrollments = enrollments.filter(e => e.status === 'pending_payment');
 
@@ -110,6 +124,23 @@ export default function Dashboard() {
     <div className="min-h-screen py-10 relative z-10 w-full">
       <SEO title="Dashboard" description="Your Mathemzi Edu learning dashboard — track courses, enrollments, and saved articles." path="/dashboard" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {user && !user.emailVerified && !isDemo && (
+          <div role="status" className="mb-6 rounded-xl border border-[#F59E0B]/30 bg-[#F59E0B]/10 px-5 py-4 text-sm text-amber-100 sm:flex sm:items-center sm:justify-between sm:gap-4">
+            <div>
+              <strong className="block text-[#F59E0B]">Verify your email to enroll or make payments</strong>
+              <span className="text-xs text-slate-300">Open the verification link sent to {user.email}. Then reload this page.</span>
+            </div>
+            <button
+              type="button"
+              onClick={resendVerification}
+              disabled={verificationStatus === 'sending' || verificationStatus === 'sent'}
+              className="mt-3 rounded-lg border border-amber-300/20 bg-amber-300/10 px-4 py-2 text-xs font-bold text-amber-100 hover:bg-amber-300/20 disabled:opacity-60 sm:mt-0"
+            >
+              {verificationStatus === 'sending' ? 'Sending...' : verificationStatus === 'sent' ? 'Email sent' : 'Resend email'}
+            </button>
+            {verificationStatus === 'error' && <span className="mt-2 block text-xs text-red-300 sm:mt-0">Could not send. Try again later.</span>}
+          </div>
+        )}
         {DEMO_MODE && isDemo && (
           <div className="mb-6 rounded-xl bg-purple-500/10 border border-purple-500/30 px-5 py-3 text-sm text-purple-300 flex items-center gap-2">
             <Eye className="h-4 w-4 shrink-0" />
@@ -126,7 +157,7 @@ export default function Dashboard() {
                 </div>
                 <div className="overflow-hidden">
                   <h3 className="font-bold text-white truncate">{user?.displayName || (user?.email ? user.email.split('@')[0] : 'User')}</h3>
-                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{isAdminUser(userRole, user?.email) ? 'Admin' : 'Student'}</p>
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{isAdminUser(userRole, user?.email, user?.emailVerified) ? 'Admin' : 'Student'}</p>
                 </div>
               </div>
               <nav className="space-y-2">
@@ -193,11 +224,21 @@ export default function Dashboard() {
                       <p className="text-slate-500 text-sm mb-4">You haven't enrolled in any courses yet.</p>
                       {dummyCourses.slice(0, 2).map(course => (
                         <div key={course.id} className="bg-white/5 backdrop-blur-xl rounded-3xl p-6 border border-white/10 shadow-2xl flex flex-col md:flex-row gap-6 hover:bg-white/10 transition-colors">
-                          <div className="w-full md:w-48 h-32 rounded-2xl overflow-hidden shrink-0 border border-white/10">
-                            <img src={imageWithFallback(course.image)} onError={applyImageFallback} alt={course.title} className="w-full h-full object-cover" />
+                          <div className="w-full md:w-40 rounded-2xl overflow-hidden shrink-0 border border-white/10">
+                            <img src={imageWithFallback(getCourseCover(course.title, course.image))} onError={applyImageFallback} alt={`${course.title} course cover`} loading="lazy" className="h-32 w-full object-cover object-top rounded-2xl" />
                           </div>
                           <div className="flex-grow flex flex-col justify-between">
                             <div>
+                              <div className="mb-2 flex flex-wrap gap-1.5">
+                                <span className="bg-white/5 border border-white/10 px-2.5 py-1 rounded-full text-[10px] font-semibold text-slate-300">
+                                  {course.mainCategory || course.category}
+                                </span>
+                                {course.subCategory && (
+                                  <span className="bg-blue-500/10 border border-blue-400/20 px-2.5 py-1 rounded-full text-[10px] font-semibold text-blue-300">
+                                    {course.subCategory}
+                                  </span>
+                                )}
+                              </div>
                               <h3 className="font-bold text-xl text-white mb-2 leading-snug">{course.title}</h3>
                               <p className="text-sm text-slate-400 mb-4 font-medium">{course.instructor} · {course.duration}</p>
                             </div>

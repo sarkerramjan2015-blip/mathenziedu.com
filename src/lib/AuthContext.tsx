@@ -66,7 +66,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(firebaseUser);
       if (firebaseUser) {
         const userEmail = firebaseUser.email || '';
-        const isInitialAdmin = userEmail === INITIAL_ADMIN_EMAIL;
+        const isInitialAdmin = firebaseUser.emailVerified && userEmail === INITIAL_ADMIN_EMAIL;
         const defaultRole = isInitialAdmin ? 'admin' : 'student';
         try {
           const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));

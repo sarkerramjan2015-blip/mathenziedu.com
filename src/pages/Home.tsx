@@ -2,15 +2,21 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, Star, Clock, Users, PlayCircle, BookOpen, Brain, Award, Calendar, BookMarked, Sigma, Library, Shapes, BarChart, Shield, CreditCard } from 'lucide-react';
 import { motion } from 'motion/react';
-import { articles as defaultArticles, courses as dummyCourses, exams, MAIN_CATEGORIES_DATA } from '../lib/data';
-import { collection, getDocs, doc, setDoc } from 'firebase/firestore';
+import { articles as defaultArticles, courses as dummyCourses, exams as defaultExams, MAIN_CATEGORIES_DATA } from '../lib/data';
+import { collection, getDocs, doc, setDoc, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../lib/AuthContext';
 import { isAdminUser } from '../lib/admin';
 import type { Article, MainCategory, SubCategory, Course } from '../lib/types';
 import { applyImageFallback, formatCurrency, imageWithFallback } from '../lib/media';
 import { useSiteSettings } from '../lib/useSiteConfig';
+import { COURSE_COVER_MAP, getCourseCover } from '../lib/courseCovers';
+import { getCategoryCover } from '../lib/categoryCovers';
+import { getExamCover } from '../lib/examCovers';
+import { formatDhakaDateTime, getExamDurationMinutes, getExamStatus, toDate } from '../lib/examStatus';
+import ExamCountdown from '../components/ExamCountdown';
 import SEO from '../components/SEO';
+import type { Exam } from '../lib/types';
 
 const MAIN_ICONS: Record<string, React.ElementType> = {
   'Academic Maths': BookOpen,
@@ -45,11 +51,12 @@ const SUBCAT_COLORS: Record<string, string> = {
 export default function Home() {
   const { user, userRole } = useAuth();
   const siteCfg = useSiteSettings();
-  const isAdmin = isAdminUser(userRole, user?.email);
+  const isAdmin = isAdminUser(userRole, user?.email, user?.emailVerified);
   const [courses, setCourses] = useState<Course[]>(dummyCourses);
   const [categories, setCategories] = useState<MainCategory[]>([]);
   const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
   const [articles, setArticles] = useState<Article[]>(defaultArticles.slice(0, 3));
+  const [featuredExams, setFeaturedExams] = useState<Exam[]>(defaultExams.slice(0, 3));
   const [loadingArticles, setLoadingArticles] = useState(true);
 
   // Build the display categories from Firestore or fallback
@@ -94,6 +101,29 @@ export default function Home() {
 
   useEffect(() => {
     fetchContent();
+  }, []);
+
+  useEffect(() => {
+    const sortFeaturedExams = (items: Exam[]) => items
+      .filter(exam => (exam.publishStatus || 'published') === 'published' && (exam.isFeatured ?? true))
+      .sort((a, b) => {
+        const aTime = toDate(a.scheduledStartAt)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+        const bTime = toDate(b.scheduledStartAt)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+        return aTime - bTime;
+      })
+      .slice(0, 4);
+
+    setFeaturedExams(sortFeaturedExams(defaultExams));
+    const q = query(collection(db, 'exams'), where('publishStatus', '==', 'published'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (!snapshot.empty) {
+        setFeaturedExams(sortFeaturedExams(snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Exam[]));
+      }
+    }, (error) => {
+      console.error(error);
+      setFeaturedExams(sortFeaturedExams(defaultExams));
+    });
+    return unsubscribe;
   }, []);
 
   const seedDummyData = async () => {
@@ -168,14 +198,14 @@ export default function Home() {
 
       // Seed Courses — 8 courses
       const dummyCoursesList = [
-        { id: '1', title: 'Standard One–Seven Foundation Mathematics', description: 'Build a strong mathematics foundation for primary and junior secondary students with structured lessons.', instructor: 'Mathemzi Edu Mentor', price: 1200, duration: '8 Weeks', lessons: 32, rating: 4.7, mainCategory: 'Academic Maths', subCategory: 'Standard One-Seven', level: 'Beginner', image: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?q=80&w=1600&auto=format&fit=crop', outcomes: ['Strong arithmetic and number sense', 'Basic algebra and geometry fundamentals', 'Problem solving confidence', 'Weekly practice tests'], curriculum: [{ title: 'Number Systems', lessons: 6, time: '1h 50m' }, { title: 'Basic Operations', lessons: 8, time: '2h 30m' }, { title: 'Fractions & Decimals', lessons: 6, time: '1h 45m' }] },
-        { id: '2', title: 'SSC Mathematics Complete Course', description: 'Complete SSC Mathematics syllabus coverage with board-focused examples and model tests.', instructor: 'Prof. Anisul Islam', price: 1500, duration: '12 Weeks', lessons: 48, rating: 4.6, mainCategory: 'Academic Maths', subCategory: 'SSC Mathematics', level: 'Intermediate', image: 'https://images.unsplash.com/photo-1509228468518-180dd4864904?q=80&w=1600&auto=format&fit=crop', outcomes: ['Full syllabus mastery', 'Board exam pattern practice', 'Written answer techniques'], curriculum: [{ title: 'Algebra & Equations', lessons: 10, time: '3h 50m' }, { title: 'Geometry & Trigonometry', lessons: 12, time: '4h 20m' }] },
-        { id: '3', title: 'HSC Higher Mathematics Foundation', description: 'Master HSC Higher Mathematics with detailed calculus, geometry, and board exam preparation.', instructor: 'Prof. Anisul Islam', price: 2000, duration: '12 Weeks', lessons: 48, rating: 4.7, mainCategory: 'Academic Maths', subCategory: 'HSC Higher Mathematics', level: 'Advanced', image: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?q=80&w=1600&auto=format&fit=crop', outcomes: ['Full HSC Higher Math coverage', 'Calculus mastery', 'Board written answer patterns'], curriculum: [{ title: 'Differentiation', lessons: 12, time: '4h 30m' }, { title: 'Integration', lessons: 12, time: '4h 30m' }] },
-        { id: '4', title: 'O Level Mathematics Preparation', description: 'Cambridge O Level Mathematics complete preparation with past paper practice.', instructor: 'Mathemzi Edu Mentor', price: 2500, duration: '10 Weeks', lessons: 40, rating: 4.5, mainCategory: 'Academic Maths', subCategory: 'O Level', level: 'Intermediate', image: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?q=80&w=1600&auto=format&fit=crop', outcomes: ['Complete O Level syllabus', 'Past paper strategies', 'Scientific calculator skills'], curriculum: [{ title: 'Number & Algebra', lessons: 12, time: '3h 40m' }, { title: 'Geometry', lessons: 10, time: '3h 15m' }] },
-        { id: '5', title: 'A Level Pure Mathematics Starter', description: 'A Level Pure Mathematics 1 & 2 complete preparation with proof-based approach.', instructor: 'Prof. Anisul Islam', price: 3000, duration: '12 Weeks', lessons: 52, rating: 4.8, mainCategory: 'Academic Maths', subCategory: 'A Level', level: 'Advanced', image: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?q=80&w=1600&auto=format&fit=crop', outcomes: ['Full A Level coverage', 'Proof-based reasoning', 'Exam techniques'], curriculum: [{ title: 'Functions', lessons: 8, time: '3h 30m' }, { title: 'Trigonometry', lessons: 10, time: '4h 00m' }] },
-        { id: '6', title: 'Junior Math Olympiad Preparation', description: 'Olympiad training for junior students with problem-solving and mock contests.', instructor: 'Dr. Hasan Rahman', price: 2000, duration: '8 Weeks', lessons: 36, rating: 4.9, mainCategory: 'Olympiad', subCategory: 'Junior Level', level: 'Intermediate', image: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?q=80&w=1600&auto=format&fit=crop', outcomes: ['Number theory', 'Combinatorics', 'Geometry proofs'], curriculum: [{ title: 'Number Theory', lessons: 8, time: '2h 50m' }, { title: 'Algebra', lessons: 8, time: '2h 50m' }] },
-        { id: '7', title: 'Secondary Math Olympiad Problem Solving', description: 'Advanced olympiad training covering core areas with competition-level practice.', instructor: 'Dr. Hasan Rahman', price: 2500, duration: '10 Weeks', lessons: 40, rating: 4.8, mainCategory: 'Olympiad', subCategory: 'Secondary Level', level: 'Advanced', image: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?q=80&w=1600&auto=format&fit=crop', outcomes: ['Advanced number theory', 'Combinatorics', 'National olympiad prep'], curriculum: [{ title: 'Number Theory Advanced', lessons: 8, time: '3h 10m' }, { title: 'Combinatorics', lessons: 8, time: '3h 00m' }] },
-        { id: '8', title: 'Engineering Admission Math Crash Course', description: 'Focused engineering admission math preparation with shortcut techniques.', instructor: 'Ayesha Siddiqua', price: 2000, duration: '10 Weeks', lessons: 40, rating: 4.9, mainCategory: 'Admission Course', subCategory: 'Engineering Admission Math', level: 'Advanced', image: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?q=80&w=1600&auto=format&fit=crop', outcomes: ['Shortcut techniques', 'Pattern recognition', 'Mock test strategy'], curriculum: [{ title: 'Arithmetic Speed', lessons: 8, time: '3h 00m' }, { title: 'Algebra', lessons: 10, time: '3h 50m' }] },
+        { id: '1', title: 'Standard One-Seven Foundation Mathematics', description: 'Build a strong mathematics foundation for primary and junior secondary students with structured lessons.', instructor: 'Mathemzi Edu Mentor', price: 1200, duration: '8 Weeks', lessons: 32, rating: 4.7, mainCategory: 'Academic Maths', subCategory: 'Standard One-Seven', level: 'Beginner', image: COURSE_COVER_MAP['Standard One-Seven Foundation Mathematics'], outcomes: ['Strong arithmetic and number sense', 'Basic algebra and geometry fundamentals', 'Problem solving confidence', 'Weekly practice tests'], curriculum: [{ title: 'Number Systems', lessons: 6, time: '1h 50m' }, { title: 'Basic Operations', lessons: 8, time: '2h 30m' }, { title: 'Fractions & Decimals', lessons: 6, time: '1h 45m' }] },
+        { id: '2', title: 'SSC Mathematics Complete Course', description: 'Complete SSC Mathematics syllabus coverage with board-focused examples and model tests.', instructor: 'Prof. Anisul Islam', price: 1500, duration: '12 Weeks', lessons: 48, rating: 4.6, mainCategory: 'Academic Maths', subCategory: 'SSC Mathematics', level: 'Intermediate', image: COURSE_COVER_MAP['SSC Mathematics Complete Course'], outcomes: ['Full syllabus mastery', 'Board exam pattern practice', 'Written answer techniques'], curriculum: [{ title: 'Algebra & Equations', lessons: 10, time: '3h 50m' }, { title: 'Geometry & Trigonometry', lessons: 12, time: '4h 20m' }] },
+        { id: '3', title: 'HSC Higher Mathematics Foundation', description: 'Master HSC Higher Mathematics with detailed calculus, geometry, and board exam preparation.', instructor: 'Prof. Anisul Islam', price: 2000, duration: '12 Weeks', lessons: 48, rating: 4.7, mainCategory: 'Academic Maths', subCategory: 'HSC Higher Mathematics', level: 'Advanced', image: COURSE_COVER_MAP['HSC Higher Mathematics Foundation'], outcomes: ['Full HSC Higher Math coverage', 'Calculus mastery', 'Board written answer patterns'], curriculum: [{ title: 'Differentiation', lessons: 12, time: '4h 30m' }, { title: 'Integration', lessons: 12, time: '4h 30m' }] },
+        { id: '4', title: 'O Level Mathematics Preparation', description: 'Cambridge O Level Mathematics complete preparation with past paper practice.', instructor: 'Mathemzi Edu Mentor', price: 2500, duration: '10 Weeks', lessons: 40, rating: 4.5, mainCategory: 'Academic Maths', subCategory: 'O Level', level: 'Intermediate', image: COURSE_COVER_MAP['O Level Mathematics Preparation'], outcomes: ['Complete O Level syllabus', 'Past paper strategies', 'Scientific calculator skills'], curriculum: [{ title: 'Number & Algebra', lessons: 12, time: '3h 40m' }, { title: 'Geometry', lessons: 10, time: '3h 15m' }] },
+        { id: '5', title: 'A Level Pure Mathematics Starter', description: 'A Level Pure Mathematics 1 & 2 complete preparation with proof-based approach.', instructor: 'Prof. Anisul Islam', price: 3000, duration: '12 Weeks', lessons: 52, rating: 4.8, mainCategory: 'Academic Maths', subCategory: 'A Level', level: 'Advanced', image: COURSE_COVER_MAP['A Level Pure Mathematics Starter'], outcomes: ['Full A Level coverage', 'Proof-based reasoning', 'Exam techniques'], curriculum: [{ title: 'Functions', lessons: 8, time: '3h 30m' }, { title: 'Trigonometry', lessons: 10, time: '4h 00m' }] },
+        { id: '6', title: 'Junior Math Olympiad Preparation', description: 'Olympiad training for junior students with problem-solving and mock contests.', instructor: 'Dr. Hasan Rahman', price: 2000, duration: '8 Weeks', lessons: 36, rating: 4.9, mainCategory: 'Olympiad', subCategory: 'Junior Level', level: 'Intermediate', image: COURSE_COVER_MAP['Junior Math Olympiad Preparation'], outcomes: ['Number theory', 'Combinatorics', 'Geometry proofs'], curriculum: [{ title: 'Number Theory', lessons: 8, time: '2h 50m' }, { title: 'Algebra', lessons: 8, time: '2h 50m' }] },
+        { id: '7', title: 'Secondary Math Olympiad Problem Solving', description: 'Advanced olympiad training covering core areas with competition-level practice.', instructor: 'Dr. Hasan Rahman', price: 2500, duration: '10 Weeks', lessons: 40, rating: 4.8, mainCategory: 'Olympiad', subCategory: 'Secondary Level', level: 'Advanced', image: COURSE_COVER_MAP['Secondary Math Olympiad Problem Solving'], outcomes: ['Advanced number theory', 'Combinatorics', 'National olympiad prep'], curriculum: [{ title: 'Number Theory Advanced', lessons: 8, time: '3h 10m' }, { title: 'Combinatorics', lessons: 8, time: '3h 00m' }] },
+        { id: '8', title: 'Engineering Admission Math Crash Course', description: 'Focused engineering admission math preparation with shortcut techniques.', instructor: 'Ayesha Siddiqua', price: 2000, duration: '10 Weeks', lessons: 40, rating: 4.9, mainCategory: 'Admission Course', subCategory: 'Engineering Admission Math', level: 'Advanced', image: COURSE_COVER_MAP['Engineering Admission Math Crash Course'], outcomes: ['Shortcut techniques', 'Pattern recognition', 'Mock test strategy'], curriculum: [{ title: 'Arithmetic Speed', lessons: 8, time: '3h 00m' }, { title: 'Algebra', lessons: 10, time: '3h 50m' }] },
       ];
 
       for (const course of dummyCoursesList) {
@@ -333,10 +363,13 @@ export default function Home() {
               const href = linkMap[cat.title] || `/courses?mainCategory=${encodeURIComponent(cat.title)}`;
               return (
                 <Link to={href} key={cat.id || i} className="min-w-0">
-                  <motion.div variants={itemVariants} className="bg-white/5 border border-white/10 p-4 md:p-5 rounded-xl backdrop-blur-sm hover:bg-white/[0.08] transition-all duration-300 hover:-translate-y-2 cursor-pointer group flex flex-col shadow-lg hover:shadow-2xl h-full min-w-0">
-                    <IconComp className={`h-7 w-7 ${cat.color || 'text-white'} mb-3 group-hover:scale-110 transition-transform duration-300`} />
-                    <div className={`font-bold text-sm md:text-base mb-1 ${cat.color || 'text-white'}`}>{cat.title}</div>
-                    <div className="text-xs text-slate-400 mb-2">{cat.description}</div>
+                  <motion.div variants={itemVariants} className="relative overflow-hidden border border-white/10 p-4 md:p-5 rounded-2xl backdrop-blur-sm transition-all duration-300 hover:-translate-y-2 cursor-pointer group flex flex-col shadow-lg hover:shadow-[0_0_26px_rgba(37,99,235,0.25)] h-full min-h-[205px] min-w-0">
+                    <img src={imageWithFallback(getCategoryCover(cat.title, cat.coverImage))} onError={applyImageFallback} alt={`${cat.title} category`} loading="lazy" className="absolute inset-0 h-full w-full object-cover object-top transition-transform duration-700 group-hover:scale-105" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A] via-[#0F172A]/90 to-[#0F172A]/30" />
+                    <div className="relative z-10 flex h-full flex-col">
+                    <IconComp className={`h-8 w-8 ${cat.color || 'text-white'} mb-3 group-hover:scale-110 transition-transform duration-300 drop-shadow`} />
+                    <div className={`font-bold text-base md:text-lg mb-1 ${cat.color || 'text-white'}`}>{cat.title}</div>
+                    <div className="text-xs text-slate-200 mb-2 leading-relaxed">{cat.description}</div>
                     {/* Subcategory pills */}
                     {subs.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 mt-auto pt-2 border-t border-white/5">
@@ -350,6 +383,7 @@ export default function Home() {
                         )}
                       </div>
                     )}
+                    </div>
                   </motion.div>
                 </Link>
               );
@@ -359,7 +393,7 @@ export default function Home() {
       </section>
 
       {/* Live Exam Widget / Upcoming Exams */}
-      <section className="py-20 relative z-10">
+      <section className="py-14 relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div 
             initial={{ opacity: 0, x: -30 }}
@@ -384,26 +418,51 @@ export default function Home() {
             viewport={{ once: true, margin: "-100px" }}
             className="grid grid-cols-1 lg:grid-cols-3 gap-6"
           >
-            {exams.slice(0, 3).map((exam, i) => (
-              <motion.div key={exam.id} variants={itemVariants} className="bg-[#1E293B]/80 border border-white/10 hover:border-blue-500/50 backdrop-blur-xl rounded-3xl p-6 shadow-xl hover:shadow-blue-900/20 relative overflow-hidden flex flex-col transition-all duration-300 hover:-translate-y-2">
-                <div className="absolute top-0 right-0 p-4">
-                  <span className="px-2 py-1 bg-red-500/80 text-[10px] font-bold rounded uppercase animate-pulse">Live</span>
+            {featuredExams.slice(0, 4).map((exam) => {
+              const status = getExamStatus(exam);
+              const buttonLabel = status === 'registration_not_open'
+                ? 'Opens Soon / শীঘ্রই শুরু'
+                : status === 'registration_open'
+                  ? user ? 'Register / রেজিস্টার করুন' : 'Login to Register / লগইন করুন'
+                  : status === 'registration_closed'
+                    ? 'Registration Closed / রেজিস্ট্রেশন বন্ধ'
+                    : status === 'live'
+                      ? 'Start Exam / পরীক্ষা শুরু করুন'
+                      : status === 'ended'
+                        ? 'View Result / ফলাফল দেখুন'
+                        : 'Schedule not configured';
+              const disabled = status === 'registration_not_open' || status === 'registration_closed' || status === 'schedule_missing';
+              return (
+              <motion.div key={exam.id} variants={itemVariants} className="bg-[#1E293B]/80 border border-white/10 hover:border-blue-500/50 backdrop-blur-xl rounded-3xl shadow-xl hover:shadow-blue-900/20 relative overflow-hidden flex flex-col transition-all duration-300 hover:-translate-y-2">
+                <div className="relative h-40 overflow-hidden">
+                  <img src={imageWithFallback(getExamCover(exam.title, exam.coverImage))} onError={applyImageFallback} alt={`${exam.title} cover`} loading="lazy" className="h-40 w-full object-cover object-top transition-transform duration-700 group-hover:scale-105" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A] via-[#0F172A]/70 to-transparent" />
+                  <div className="absolute left-4 top-4">
+                    <span className={`px-2 py-1 text-[10px] font-bold rounded uppercase ${
+                      status === 'live' ? 'bg-red-500/80 text-white animate-pulse' : 'bg-black/50 text-slate-100 border border-white/10'
+                    }`}>{status === 'live' ? 'Live' : status.replaceAll('_', ' ')}</span>
+                  </div>
+                  <h3 className="absolute bottom-4 left-4 right-4 text-xl font-bold text-white group-hover:text-blue-400 transition-colors">{exam.title}</h3>
                 </div>
-                <h3 className="text-xl font-bold mb-1 text-white group-hover:text-blue-400 transition-colors">{exam.title}</h3>
-                <p className="text-sm text-slate-400 mb-6">{exam.category} - {exam.type} Focus</p>
+                <div className="p-6 flex flex-1 flex-col">
+                <p className="text-sm text-slate-400 mb-2">{exam.category} - {exam.type} Focus</p>
+                <p className="text-xs font-medium text-slate-300 mb-4">{formatDhakaDateTime(exam.scheduledStartAt)} <span className="text-slate-500">• বাংলাদেশ সময়</span></p>
                 
                 <div className="flex items-center justify-between bg-black/30 rounded-2xl p-4 mb-6 border border-white/5">
                   <div>
-                    <div className="text-xs text-slate-400 uppercase">Time remaining</div>
-                    <div className="text-xl font-mono font-bold tracking-wider text-white">42:15:08</div>
+                    <ExamCountdown exam={exam} />
                   </div>
-                  <Link to={`/exams/${exam.id}`} className="px-4 py-2 bg-[#10B981] text-xs font-bold rounded-lg hover:bg-emerald-400 hover:scale-105 text-[#0F172A] transition-all duration-300">Register</Link>
+                  {disabled ? (
+                    <button disabled className="px-4 py-2 bg-white/10 text-xs font-bold rounded-lg text-slate-400 border border-white/10">{buttonLabel}</button>
+                  ) : (
+                    <Link to={`/exams/${exam.id}`} className="px-4 py-2 bg-[#10B981] text-xs font-bold rounded-lg hover:bg-emerald-400 hover:scale-105 text-[#0F172A] transition-all duration-300">{buttonLabel}</Link>
+                  )}
                 </div>
 
                 <div className="space-y-3 mt-auto">
                   <div className="flex justify-between text-xs border-b border-white/10 pb-2">
                     <span className="text-slate-400">Duration</span>
-                    <span className="text-[#F59E0B] font-bold">{exam.duration || '60 Mins'}</span>
+                    <span className="text-[#F59E0B] font-bold">{exam.duration || `${getExamDurationMinutes(exam)} Mins`}</span>
                   </div>
                   <div className="flex justify-between text-xs border-b border-white/10 pb-2">
                     <span className="text-slate-400">Fee</span>
@@ -414,14 +473,15 @@ export default function Home() {
                     <span className="text-white font-medium">{exam.totalMarks} Total</span>
                   </div>
                 </div>
+                </div>
               </motion.div>
-            ))}
+            )})}
           </motion.div>
         </div>
       </section>
 
       {/* Popular Courses */}
-      <section className="py-20 relative z-10">
+      <section className="py-14 relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div 
             initial={{ opacity: 0, x: -30 }}
@@ -448,14 +508,24 @@ export default function Home() {
           >
             {courses.slice(0, 4).map((course) => (
               <motion.div key={course.id} variants={itemVariants} className="bg-white/5 border border-white/10 hover:border-white/20 backdrop-blur-sm rounded-2xl overflow-hidden shadow-lg hover:shadow-[0_0_20px_rgba(37,99,235,0.2)] transition-all duration-300 hover:-translate-y-2 group shrink-0 flex flex-col h-full">
-                <div className="relative h-48 overflow-hidden shrink-0">
-                  <img src={imageWithFallback(course.image)} onError={applyImageFallback} alt={course.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-80 group-hover:opacity-100" />
+                <div className="relative overflow-hidden shrink-0">
+                  <img src={imageWithFallback(getCourseCover(course.title, course.image))} onError={applyImageFallback} alt={`${course.title} course cover`} loading="lazy" className="h-56 w-full object-cover object-top rounded-t-2xl group-hover:scale-105 transition-transform duration-700 opacity-80 group-hover:opacity-100" />
                   <div className="absolute top-4 left-4 bg-black/40 backdrop-blur-md border border-white/10 px-3 py-1 rounded-full text-xs font-semibold text-white">
                     {course.category}
                   </div>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 </div>
                 <div className="p-6 flex flex-col flex-grow">
+                  <div className="mb-3 flex flex-wrap gap-1.5">
+                    <span className="bg-white/5 border border-white/10 px-2.5 py-1 rounded-full text-[10px] font-semibold text-slate-300">
+                      {course.mainCategory || course.category}
+                    </span>
+                    {course.subCategory && (
+                      <span className="bg-blue-500/10 border border-blue-400/20 px-2.5 py-1 rounded-full text-[10px] font-semibold text-blue-300">
+                        {course.subCategory}
+                      </span>
+                    )}
+                  </div>
                   <div className="flex items-center gap-1 text-[#F59E0B] mb-2">
                     <Star className="h-4 w-4 fill-current" />
                     <span className="text-sm font-bold text-white">{course.rating || '4.8'}</span>
@@ -486,7 +556,7 @@ export default function Home() {
       </section>
 
       {/* Mathematics and Islam Highlight & Success Stats (Split Layout) */}
-      <section className="py-20 relative z-10">
+      <section className="py-14 relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
             
@@ -576,7 +646,7 @@ export default function Home() {
       </section>
 
       {/* Articles Preview */}
-      <section className="py-20 relative z-10">
+      <section className="py-14 relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-extrabold mb-4 text-[#F8FAFC]">Latest Articles</h2>
           <p className="text-slate-400 mb-10 max-w-2xl mx-auto">Explore wisdom beyond equations.</p>

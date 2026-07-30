@@ -143,7 +143,11 @@ export default function AdminCourses() {
               <input type="number" step="0.1" placeholder="Rating" value={formData.rating} onChange={e => setFormData({...formData, rating: Number(e.target.value)})} className="w-full p-2 border rounded text-slate-800" />
               <input type="number" placeholder="Lessons" value={formData.lessons} onChange={e => setFormData({...formData, lessons: Number(e.target.value)})} className="w-full p-2 border rounded text-slate-800" />
             </div>
-            <input placeholder="Image URL" value={formData.image} onChange={e => setFormData({...formData, image: e.target.value})} className="w-full p-2 border rounded text-slate-800" />
+            <div>
+              <label className="mb-1 block text-xs font-bold text-slate-200">Course Cover / কোর্স কভার</label>
+              <input placeholder="Image URL or /course-covers/file-name.png" value={formData.image} onChange={e => setFormData({...formData, image: e.target.value})} className="w-full p-2 border rounded text-slate-800" />
+              <p className="mt-1 text-xs text-slate-300">ছবির URL অথবা `/course-covers/file-name.png` path দিন।</p>
+            </div>
             <textarea required placeholder={L.description} rows={4} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full p-2 border rounded text-slate-800 bg-white" />
             
             <div className="flex gap-4 pt-4">

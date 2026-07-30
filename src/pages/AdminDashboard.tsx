@@ -7,6 +7,7 @@ import AdminCourses from '../components/admin/AdminCourses';
 import AdminBooks from '../components/admin/AdminBooks';
 import AdminEnrollments from '../components/admin/AdminEnrollments';
 import AdminExamQuestions from '../components/admin/AdminExamQuestions';
+import AdminExams from '../components/admin/AdminExams';
 import AdminExamEvaluation from '../components/admin/AdminExamEvaluation';
 import AdminCertificates from '../components/admin/AdminCertificates';
 import AdminContactMessages from '../components/admin/AdminContactMessages';
@@ -17,9 +18,9 @@ import { formatCurrency } from '../lib/media';
 import { L } from '../lib/i18n';
 import { DEMO_MODE, clearDemoSession } from '../lib/demo';
 import { useAuth } from '../lib/AuthContext';
-import { collection, getDocs, query, orderBy, where } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import type { AdminAnalyticsSummary, Enrollment, Order, PaymentSubmission, ExamAttempt, WrittenSubmission, Certificate, Course } from '../lib/types';
+import type { AdminAnalyticsSummary, Enrollment, Order, PaymentSubmission, ExamAttempt, WrittenSubmission, Certificate, Course, Exam } from '../lib/types';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -33,6 +34,7 @@ export default function AdminDashboard() {
     pendingWrittenEvaluations: 0, certificatesIssued: 0,
   });
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
+  const [adminExams, setAdminExams] = useState<Exam[]>(exams);
 
   const handleLogout = async () => {
     if (isDemo) {
@@ -46,6 +48,26 @@ export default function AdminDashboard() {
 
   // Fetch real analytics
   useEffect(() => {
+    if (DEMO_MODE && isDemo) {
+      setAnalytics({
+        totalUsers: adminStats.totalStudents,
+        totalEnrollments: 0,
+        activeEnrollments: 0,
+        pendingOrders: 0,
+        paidOrders: 0,
+        totalRevenue: 1250000,
+        totalCourses: defaultCourses.length,
+        totalBooks: 0,
+        totalExams: exams.length,
+        totalExamAttempts: 0,
+        averageExamScore: 0,
+        pendingWrittenEvaluations: 0,
+        certificatesIssued: 0,
+      });
+      setAnalyticsLoading(false);
+      return;
+    }
+
     const fetchAnalytics = async () => {
       setAnalyticsLoading(true);
       try {
@@ -104,7 +126,15 @@ export default function AdminDashboard() {
       finally { setAnalyticsLoading(false); }
     };
     fetchAnalytics();
-  }, []);
+  }, [isDemo]);
+
+  useEffect(() => {
+    if (DEMO_MODE && isDemo) return;
+    const unsubscribe = onSnapshot(collection(db, 'exams'), (snapshot) => {
+      if (!snapshot.empty) setAdminExams(snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Exam[]);
+    });
+    return unsubscribe;
+  }, [isDemo]);
 
   const menu = [
     { id: 'overview', label: L.overview, icon: LayoutDashboard },
@@ -114,6 +144,7 @@ export default function AdminDashboard() {
     { id: 'courses', label: L.courses, icon: BookOpen },
     { id: 'books', label: L.books, icon: BookMarked },
     { id: 'articles', label: L.articles, icon: FileText },
+    { id: 'exams', label: 'Exams', icon: Calendar },
     { id: 'exam_questions', label: L.examQuestions, icon: HelpCircle },
     { id: 'exam_evaluation', label: L.examEvaluation, icon: CheckSquare },
     { id: 'certificates', label: L.certificates, icon: Award },
@@ -359,7 +390,7 @@ export default function AdminDashboard() {
                 <div className="bg-white/5 backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden">
                   <div className="p-6 flex justify-between items-center bg-white/5 border-b border-white/10">
                     <h3 className="font-bold text-lg text-white">Recent Courses</h3>
-                    <button className="text-sm text-[#2563EB] font-bold hover:underline">View All</button>
+                    <button type="button" onClick={() => setActiveTab('courses')} className="text-sm text-[#2563EB] font-bold hover:underline">View All</button>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
@@ -394,7 +425,7 @@ export default function AdminDashboard() {
                 <div className="bg-white/5 backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden">
                   <div className="p-6 flex justify-between items-center bg-white/5 border-b border-white/10">
                     <h3 className="font-bold text-lg text-white">Upcoming Exams</h3>
-                    <button className="text-sm text-[#2563EB] font-bold hover:underline">View All</button>
+                    <button type="button" onClick={() => setActiveTab('exams')} className="text-sm text-[#2563EB] font-bold hover:underline">View All</button>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
@@ -435,9 +466,10 @@ export default function AdminDashboard() {
           {activeTab === 'courses' && <AdminCourses />}
           {activeTab === 'books' && <AdminBooks />}
           {activeTab === 'articles' && <AdminArticles />}
-          {activeTab === 'exam_questions' && <AdminExamQuestions exams={exams} />}
-          {activeTab === 'exam_evaluation' && <AdminExamEvaluation exams={exams} />}
-          {activeTab === 'certificates' && <AdminCertificates exams={exams} />}
+          {activeTab === 'exams' && <AdminExams />}
+          {activeTab === 'exam_questions' && <AdminExamQuestions exams={adminExams} />}
+          {activeTab === 'exam_evaluation' && <AdminExamEvaluation exams={adminExams} />}
+          {activeTab === 'certificates' && <AdminCertificates exams={adminExams} />}
           {activeTab === 'contact_messages' && <AdminContactMessages />}
           {activeTab === 'students' && (
             <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10">

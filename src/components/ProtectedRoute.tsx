@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Link, Navigate, useLocation } from 'react-router-dom';
 import { ShieldAlert } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { isAdminUser } from '../lib/admin';
@@ -12,8 +12,8 @@ interface ProtectedRouteProps {
 
 function RouteLoader() {
   return (
-    <div className="min-h-[70vh] flex items-center justify-center">
-      <div className="h-12 w-12 rounded-full border-4 border-[#2563EB] border-t-transparent animate-spin" />
+    <div className="min-h-[70vh] flex items-center justify-center" role="status" aria-label="Checking access">
+      <div className="h-12 w-12 rounded-full border-4 border-[#2563EB] border-t-transparent animate-spin" aria-hidden="true" />
     </div>
   );
 }
@@ -27,6 +27,14 @@ function AccessDenied() {
         <p className="text-sm leading-relaxed text-slate-300">
           This area is reserved for Mathemzi Edu administrators. Please sign in with an approved admin account.
         </p>
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+          <Link to="/dashboard" className="rounded-xl bg-[#2563EB] px-5 py-2.5 text-sm font-bold text-white hover:bg-blue-500">
+            Student dashboard
+          </Link>
+          <Link to="/" className="rounded-xl border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-bold text-slate-200 hover:bg-white/10">
+            Back to home
+          </Link>
+        </div>
       </div>
     </div>
   );
@@ -54,7 +62,7 @@ export default function ProtectedRoute({ children, adminOnly = false }: Protecte
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 
-  if (adminOnly && !isAdminUser(userRole, user.email)) {
+  if (adminOnly && !isAdminUser(userRole, user.email, user.emailVerified)) {
     return <AccessDenied />;
   }
 

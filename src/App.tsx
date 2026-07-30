@@ -3,6 +3,8 @@ import { Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ProtectedRoute from './components/ProtectedRoute';
+import AppErrorBoundary from './components/AppErrorBoundary';
+import ScrollToTop from './components/ScrollToTop';
 
 // Pages
 const Articles = React.lazy(() => import('./pages/Articles'));
@@ -29,8 +31,8 @@ const CertificateView = React.lazy(() => import('./pages/CertificateView'));
 const ForgotPassword = React.lazy(() => import('./pages/ForgotPassword'));
 
 const PageLoader = () => (
-  <div className="min-h-[70vh] flex items-center justify-center">
-    <div className="h-12 w-12 rounded-full border-4 border-[#2563EB] border-t-transparent animate-spin" />
+  <div className="min-h-[70vh] flex items-center justify-center" role="status" aria-label="Loading page">
+    <div className="h-12 w-12 rounded-full border-4 border-[#2563EB] border-t-transparent animate-spin" aria-hidden="true" />
   </div>
 );
 
@@ -43,7 +45,15 @@ const AdminLayout = () => (
 
 export default function App() {
   return (
-    <div className="flex flex-col min-h-screen relative overflow-x-hidden bg-[#0F172A] text-[#F8FAFC]">
+    <AppErrorBoundary>
+    <div className="flex flex-col min-h-screen relative overflow-hidden bg-[#0F172A] text-[#F8FAFC]">
+      <a
+        href="#main-content"
+        className="fixed left-4 top-3 z-[100] -translate-y-24 rounded-lg bg-white px-4 py-2 font-bold text-slate-950 shadow-xl transition-transform focus:translate-y-0"
+      >
+        Skip to main content
+      </a>
+      <ScrollToTop />
       {/* Global Mesh Background Gradients */}
       <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-[#2563EB]/30 rounded-full blur-[120px] pointer-events-none"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-[#10B981]/20 rounded-full blur-[120px] pointer-events-none"></div>
@@ -55,7 +65,7 @@ export default function App() {
           <Route path="*" element={
             <>
               <Navbar />
-              <main className="flex-grow z-10 min-w-0">
+              <main id="main-content" className="flex-grow z-10 min-w-0" tabIndex={-1}>
                 <Routes>
                   <Route path="/" element={<Home />} />
                   <Route path="/about" element={<About />} />
@@ -86,5 +96,6 @@ export default function App() {
         </Routes>
       </Suspense>
     </div>
+    </AppErrorBoundary>
   );
 }

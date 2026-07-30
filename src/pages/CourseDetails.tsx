@@ -6,6 +6,7 @@ import { db } from '../lib/firebase';
 import { courses as dummyCourses } from '../lib/data';
 import type { Course, Enrollment, Order, CourseProgress, LessonProgress } from '../lib/types';
 import { applyImageFallback, formatCurrency, imageWithFallback } from '../lib/media';
+import { getCourseCover } from '../lib/courseCovers';
 import { useAuth } from '../lib/AuthContext';
 import { DEMO_MODE, addDemoLocalData, updateDemoLocalData, getDemoLocalData, isPermissionError } from '../lib/demo';
 import SEO from '../components/SEO';
@@ -102,6 +103,34 @@ const [togglingLesson, setTogglingLesson] = useState<string | null>(null);
       }
     };
     checkEnrollment();
+  }, [user, id]);
+
+  // Reuse the latest course order so refreshing the page cannot create duplicates.
+  useEffect(() => {
+    if (!user || !id) {
+      setCreatedOrder(null);
+      return;
+    }
+
+    const fetchExistingOrder = async () => {
+      try {
+        const orderSnapshot = await getDocs(query(collection(db, 'orders'), where('userId', '==', user.uid)));
+        const latestOrder = orderSnapshot.docs
+          .map(document => ({ id: document.id, ...document.data() }) as Order)
+          .filter(order => order.itemType === 'course' && order.itemId === id && (order.status === 'pending' || order.status === 'paid'))
+          .sort((a, b) => b.createdAt - a.createdAt)[0];
+        setCreatedOrder(latestOrder || null);
+      } catch {
+        if (DEMO_MODE) {
+          const latestDemoOrder = (getDemoLocalData('orders') as Order[])
+            .filter(order => order.userId === user.uid && order.itemType === 'course' && order.itemId === id && (order.status === 'pending' || order.status === 'paid'))
+            .sort((a, b) => b.createdAt - a.createdAt)[0];
+          setCreatedOrder(latestDemoOrder || null);
+        }
+      }
+    };
+
+    fetchExistingOrder();
   }, [user, id]);
 
   // Load progress when user is enrolled
@@ -298,6 +327,15 @@ const [togglingLesson, setTogglingLesson] = useState<string | null>(null);
         setEnrollment({ exists: true, status: 'active', loading: false });
         setActionMessage({ type: 'success', text: DEMO_MODE ? 'Enrolled! (Demo mode: saved locally only.)' : 'You are now enrolled! Start learning right away.' });
       } else {
+        if (createdOrder?.status === 'pending') {
+          setActionMessage({ type: 'info', text: 'Your existing order is ready below. Complete the bKash payment and submit the transaction ID.' });
+          return;
+        }
+        if (createdOrder?.status === 'paid') {
+          setActionMessage({ type: 'info', text: 'Payment is verified. Your course access is being refreshed; contact support if it does not appear shortly.' });
+          return;
+        }
+
         // Paid course — create pending order
         const orderData: Omit<Order, 'id'> = {
           userId: user.uid,
@@ -364,6 +402,8 @@ const [togglingLesson, setTogglingLesson] = useState<string | null>(null);
     }
     if (!user) return 'Login to Enroll';
     if (isFree) return 'Enroll Free';
+    if (createdOrder?.status === 'pending') return 'Continue Payment';
+    if (createdOrder?.status === 'paid') return 'Payment Verified';
     return 'Enroll Now — Pay Later';
   };
 
@@ -517,8 +557,8 @@ const [togglingLesson, setTogglingLesson] = useState<string | null>(null);
 
           <div className="lg:w-1/3">
             <div className="sticky top-28 bg-white/10 backdrop-blur-xl rounded-3xl border border-white/20 shadow-2xl overflow-hidden">
-              <div className="h-48 relative">
-                <img src={imageWithFallback(course.image)} onError={applyImageFallback} alt={course.title} className="w-full h-full object-cover opacity-80" />
+              <div className="relative">
+                <img src={imageWithFallback(getCourseCover(course.title, course.image))} onError={applyImageFallback} alt={`${course.title} course cover`} loading="lazy" className="h-72 w-full object-cover object-top rounded-t-3xl opacity-80" />
                 <div className="absolute inset-0 bg-[#0F172A]/40 flex items-center justify-center">
                   <div className="h-16 w-16 bg-white/20 backdrop-blur-md rounded-2xl border border-white/20 flex items-center justify-center shadow-xl">
                     <PlayCircle className="h-8 w-8 text-white" />
@@ -563,9 +603,9 @@ const [togglingLesson, setTogglingLesson] = useState<string | null>(null);
 
                 <button
                   onClick={handleEnroll}
-                  disabled={actionLoading || enrollment.loading || enrollment.exists}
+                  disabled={actionLoading || enrollment.loading || enrollment.exists || createdOrder?.status === 'paid'}
                   className={`w-full font-bold text-lg py-4 rounded-xl mb-4 transition-all shadow-lg flex items-center justify-center gap-2 ${
-                    enrollment.exists
+                    enrollment.exists || createdOrder?.status === 'paid'
                       ? 'bg-[#10B981]/30 text-[#10B981] cursor-default border border-[#10B981]/30'
                       : 'bg-[#2563EB] hover:bg-blue-500 text-white shadow-blue-500/30'
                   } disabled:opacity-60`}
@@ -580,7 +620,7 @@ const [togglingLesson, setTogglingLesson] = useState<string | null>(null);
                 )}
 
                 {/* bKash Payment Section — shown after order is created */}
-                {createdOrder && user && (
+                {createdOrder?.status === 'pending' && user && (
                   <div className="mb-6">
                     <BkashPaymentSection
                       order={createdOrder}

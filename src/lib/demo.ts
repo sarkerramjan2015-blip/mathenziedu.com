@@ -2,11 +2,11 @@
 // Enable by setting VITE_DEMO_MODE=true in .env.local
 
 const isDemoEnabled = (): boolean => {
-  return import.meta.env.VITE_DEMO_MODE === 'true';
+  return !import.meta.env.PROD && import.meta.env.VITE_DEMO_MODE === 'true';
 };
 
 const isSimpleEmailLoginEnabled = (): boolean => {
-  return import.meta.env.VITE_SIMPLE_EMAIL_LOGIN === 'true';
+  return !import.meta.env.PROD && import.meta.env.VITE_SIMPLE_EMAIL_LOGIN === 'true';
 };
 
 export const DEMO_MODE = isDemoEnabled();

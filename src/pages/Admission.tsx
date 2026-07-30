@@ -7,6 +7,7 @@ import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import type { Course } from '../lib/types';
 import { applyImageFallback, formatCurrency, imageWithFallback } from '../lib/media';
+import { getCourseCover } from '../lib/courseCovers';
 import SEO from '../components/SEO';
 
 const SUBCATEGORIES = ['All', 'University Admission Math', 'Engineering Admission Math', 'Medical Admission Math', 'GST Admission Math', 'IBA/BBA Math', 'Written Math Preparation', 'Shortcut Math & Problem Solving'];
@@ -148,8 +149,8 @@ export default function Admission() {
             {filtered.map(course => (
               <motion.div key={course.id} variants={itemVariants}
                 className={`bg-gradient-to-br ${SUBCAT_BG[course.subCategory || ''] || 'from-white/5 to-white/5'} border border-white/10 hover:border-white/20 backdrop-blur-sm rounded-2xl overflow-hidden shadow-lg transition-all duration-300 hover:-translate-y-2 flex flex-col h-full`}>
-                <div className="relative h-48 overflow-hidden">
-                  <img src={imageWithFallback(course.image)} onError={applyImageFallback} alt={course.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                <div className="relative overflow-hidden">
+                  <img src={imageWithFallback(getCourseCover(course.title, course.image))} onError={applyImageFallback} alt={`${course.title} course cover`} loading="lazy" className="h-56 w-full object-cover object-top rounded-t-2xl group-hover:scale-105 transition-transform duration-700" />
                   <div className="absolute top-3 left-3 flex gap-1.5">
                     <span className="bg-black/60 backdrop-blur-md border border-white/10 px-2.5 py-1 rounded-full text-[10px] font-semibold text-white">Admission Course</span>
                     {course.subCategory && (
@@ -160,6 +161,14 @@ export default function Admission() {
                   </div>
                 </div>
                 <div className="p-6 flex flex-col flex-grow">
+                  <div className="mb-3 flex flex-wrap gap-1.5">
+                    <span className="bg-white/5 border border-white/10 px-2.5 py-1 rounded-full text-[10px] font-semibold text-slate-300">Admission Course</span>
+                    {course.subCategory && (
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-semibold border ${SUBCAT_COLORS[course.subCategory] || 'text-slate-300 bg-white/10 border-white/20'}`}>
+                        {course.subCategory}
+                      </span>
+                    )}
+                  </div>
                   <div className="flex items-center gap-1 text-[#F59E0B] mb-2">
                     <Star className="h-4 w-4 fill-current" />
                     <span className="text-sm font-bold text-white">{course.rating || '4.8'}</span>

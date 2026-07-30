@@ -21,6 +21,8 @@
 @layer base {
   body {
     @apply bg-[#0F172A] text-[#F8FAFC] font-sans antialiased;
+    min-height: 100vh;
+    color-scheme: dark;
   }
 
   html,
@@ -41,9 +43,25 @@
   canvas {
     max-width: 100%;
   }
+
+  :focus-visible {
+    outline: 3px solid #60a5fa;
+    outline-offset: 3px;
+  }
   
   h1, h2, h3, h4, h5, h6 {
     @apply font-display tracking-tight text-[#F8FAFC];
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 

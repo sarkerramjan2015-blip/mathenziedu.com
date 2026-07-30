@@ -6,6 +6,7 @@ export interface MainCategory {
   description: string;
   color?: string;
   icon?: string;
+  coverImage?: string;
   order?: number;
 }
 
@@ -59,8 +60,17 @@ export interface Exam {
   fee: number;
   date: string;
   duration: string;
+  durationMinutes?: number;
   totalMarks: number;
   syllabus: string;
+  coverImage?: string;
+  registrationOpenAt?: import('firebase/firestore').Timestamp;
+  registrationCloseAt?: import('firebase/firestore').Timestamp;
+  scheduledStartAt?: import('firebase/firestore').Timestamp;
+  timezone?: 'Asia/Dhaka';
+  publishStatus?: 'draft' | 'published' | 'archived';
+  isFeatured?: boolean;
+  statusOverride?: 'auto' | 'upcoming' | 'live' | 'ended';
   /** Firestore document reference — set when fetched from DB */
   description?: string;
   instructions?: string;
@@ -394,4 +404,3 @@ export interface SiteSettings {
   footerText: string;
   updatedAt: number;
 }
-

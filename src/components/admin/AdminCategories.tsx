@@ -4,6 +4,7 @@ import { db } from '../../lib/firebase';
 import { Edit2, Trash2, Plus, ChevronDown, ChevronRight, Save, X } from 'lucide-react';
 import { L } from '../../lib/i18n';
 import type { MainCategory, SubCategory } from '../../lib/types';
+import { UploadField } from '../../lib/upload';
 
 export default function AdminCategories() {
   const [mainCategories, setMainCategories] = useState<MainCategory[]>([]);
@@ -12,7 +13,7 @@ export default function AdminCategories() {
   // Main cat editing
   const [editingMain, setEditingMain] = useState(false);
   const [mainId, setMainId] = useState<string | null>(null);
-  const [mainForm, setMainForm] = useState({ title: '', description: '', color: '', order: 0 });
+  const [mainForm, setMainForm] = useState({ title: '', description: '', color: '', coverImage: '', order: 0 });
   const [mainCustomId, setMainCustomId] = useState('');
   // Sub cat editing
   const [editingSub, setEditingSub] = useState(false);
@@ -58,7 +59,7 @@ export default function AdminCategories() {
   const resetMainForm = () => {
     setEditingMain(false);
     setMainId(null);
-    setMainForm({ title: '', description: '', color: '', order: 0 });
+    setMainForm({ title: '', description: '', color: '', coverImage: '', order: 0 });
     setMainCustomId('');
   };
 
@@ -131,7 +132,7 @@ export default function AdminCategories() {
           <h2 className="text-2xl font-bold text-white">{L.categories}</h2>
           <p className="mt-1 text-xs text-slate-400">{L.catsHelp}</p>
         </div>
-        <button onClick={() => { setEditingMain(true); setMainId(null); setMainForm({ title: '', description: '', color: '', order: mainCategories.length + 1 }); setMainCustomId(''); }} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold shadow-lg">
+        <button onClick={() => { setEditingMain(true); setMainId(null); setMainForm({ title: '', description: '', color: '', coverImage: '', order: mainCategories.length + 1 }); setMainCustomId(''); }} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold shadow-lg">
           <Plus className="h-4 w-4"/> {L.add} Main Category
         </button>
       </div>
@@ -147,6 +148,13 @@ export default function AdminCategories() {
             <input required placeholder="Title (e.g. Academic Maths)" value={mainForm.title} onChange={e => setMainForm({...mainForm, title: e.target.value})} className="w-full p-2 border rounded text-slate-800" />
             <input required placeholder="Short Description" value={mainForm.description} onChange={e => setMainForm({...mainForm, description: e.target.value})} className="w-full p-2 border rounded text-slate-800" />
             <input placeholder="Color Config (e.g. text-[#F59E0B])" value={mainForm.color} onChange={e => setMainForm({...mainForm, color: e.target.value})} className="w-full p-2 border rounded text-slate-800" />
+            <UploadField
+              label="Category Cover / ক্যাটাগরি কভার"
+              value={mainForm.coverImage}
+              onChange={coverImage => setMainForm({ ...mainForm, coverImage })}
+              folder="category-covers"
+            />
+            <p className="-mt-3 text-xs text-slate-300">Image URL অথবা /course-covers/file-name.png path দিন।</p>
             <input type="number" placeholder="Order" value={mainForm.order} onChange={e => setMainForm({...mainForm, order: Number(e.target.value)})} className="w-full p-2 border rounded text-slate-800" />
             <div className="flex gap-4 pt-4">
               <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">Save</button>
@@ -193,7 +201,7 @@ export default function AdminCategories() {
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-slate-500 bg-black/30 px-2 py-1 rounded">{subs.length} subs</span>
                   <button onClick={(e) => { e.stopPropagation(); handleMainDelete(main.id); }} className="p-1.5 text-red-400 hover:bg-red-400/10 rounded"><Trash2 className="h-4 w-4" /></button>
-                  <button onClick={(e) => { e.stopPropagation(); setEditingMain(true); setMainId(main.id); setMainForm({ title: main.title, description: main.description, color: main.color || '', order: main.order || 0 }); }} className="p-1.5 text-blue-400 hover:bg-blue-400/10 rounded"><Edit2 className="h-4 w-4" /></button>
+                  <button onClick={(e) => { e.stopPropagation(); setEditingMain(true); setMainId(main.id); setMainForm({ title: main.title, description: main.description, color: main.color || '', coverImage: main.coverImage || '', order: main.order || 0 }); }} className="p-1.5 text-blue-400 hover:bg-blue-400/10 rounded"><Edit2 className="h-4 w-4" /></button>
                 </div>
               </div>
 

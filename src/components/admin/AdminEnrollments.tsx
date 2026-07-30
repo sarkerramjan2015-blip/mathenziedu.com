@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, updateDoc, doc, addDoc } from 'firebase/firestore';
+import { collection, getDocs, updateDoc, doc, runTransaction } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { CheckCircle, XCircle, Search, Smartphone, AlertCircle, MessageSquare } from 'lucide-react';
 import { L } from '../../lib/i18n';
@@ -61,21 +61,51 @@ export default function AdminEnrollments() {
     setActionLoading(sub.id);
     try {
       try {
-        await updateDoc(doc(db, 'paymentSubmissions', sub.id), { status: 'verified', reviewedAt: Date.now(), adminNote: adminNote || '' });
-        await updateDoc(doc(db, 'orders', sub.orderId), { status: 'paid', paymentMethod: 'bkash_manual', updatedAt: Date.now() });
+        await runTransaction(db, async transaction => {
+          const submissionRef = doc(db, 'paymentSubmissions', sub.id!);
+          const orderRef = doc(db, 'orders', sub.orderId);
+          const [submissionSnapshot, orderSnapshot] = await Promise.all([
+            transaction.get(submissionRef),
+            transaction.get(orderRef),
+          ]);
 
-        const order = orders.find(o => o.id === sub.orderId);
-        if (order && order.itemType === 'course') {
-          await addDoc(collection(db, 'enrollments'), {
-            userId: sub.userId, userEmail: sub.userEmail, courseId: order.itemId,
-            courseTitle: order.itemTitle, enrollmentType: 'paid', status: 'active',
-            progress: 0, enrolledAt: Date.now(),
+          if (!submissionSnapshot.exists() || !orderSnapshot.exists()) throw new Error('Payment or order no longer exists.');
+          const currentSubmission = submissionSnapshot.data() as PaymentSubmission;
+          const currentOrder = { id: orderSnapshot.id, ...orderSnapshot.data() } as Order;
+          if (currentSubmission.status !== 'submitted') throw new Error('This payment has already been reviewed.');
+          if (currentOrder.status !== 'pending') throw new Error('This order is not pending.');
+          if (currentOrder.userId !== currentSubmission.userId || currentOrder.amount !== currentSubmission.amount) {
+            throw new Error('Payment details do not match the order.');
+          }
+
+          const reviewedAt = Date.now();
+          transaction.update(submissionRef, { status: 'verified', reviewedAt, adminNote: adminNote.trim() });
+          transaction.update(orderRef, { status: 'paid', paymentMethod: 'bkash_manual', updatedAt: reviewedAt });
+
+          if (currentOrder.itemType === 'course') {
+            const enrollmentRef = doc(db, 'enrollments', `${currentSubmission.userId}_${currentOrder.itemId}`);
+            transaction.set(enrollmentRef, {
+              userId: currentSubmission.userId,
+              userEmail: currentSubmission.userEmail,
+              courseId: currentOrder.itemId,
+              courseTitle: currentOrder.itemTitle,
+              enrollmentType: 'paid',
+              status: 'active',
+              progress: 0,
+              enrolledAt: reviewedAt,
+            }, { merge: true });
+          }
+
+          transaction.set(doc(db, 'payments', sub.id!), {
+            orderId: sub.orderId,
+            userId: currentSubmission.userId,
+            amount: currentSubmission.amount,
+            currency: 'BDT',
+            provider: 'bkash_manual',
+            status: 'paid',
+            transactionId: currentSubmission.transactionId,
+            createdAt: reviewedAt,
           });
-        }
-
-        await addDoc(collection(db, 'payments'), {
-          orderId: sub.orderId, userId: sub.userId, amount: sub.amount, currency: 'BDT',
-          provider: 'bkash_manual', status: 'paid', transactionId: sub.transactionId, createdAt: Date.now(),
         });
       } catch (e) {
         if (DEMO_MODE && isPermissionError(e)) {

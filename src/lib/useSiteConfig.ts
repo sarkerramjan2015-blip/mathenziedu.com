@@ -72,7 +72,7 @@ function configFallback(): SiteConfig {
     instagramUrl: SOCIAL_LINKS.instagram,
     seoTitle: 'Mathemzi Edu | Premium Mathematics Learning Platform in Bangladesh',
     seoDescription: 'Master Mathematics for School, Olympiad & Admission Success.',
-    seoOgImage: '',
+    seoOgImage: `${SITE_CONFIG.url}/og.png`,
     footerText: 'Master Mathematics with Logic, Practice & Confidence.',
   };
 }

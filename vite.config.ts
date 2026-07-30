@@ -16,5 +16,21 @@ export default defineConfig(() => {
       // Do not modify: file watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
     },
+    build: {
+      target: 'es2022',
+      sourcemap: false,
+      chunkSizeWarningLimit: 550,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('/node_modules/@firebase/') || id.includes('/node_modules/firebase/')) return 'firebase';
+            if (id.includes('/node_modules/react') || id.includes('/node_modules/scheduler/')) return 'react';
+            if (id.includes('/node_modules/motion/')) return 'motion';
+            if (id.includes('/node_modules/lucide-react/')) return 'icons';
+            return undefined;
+          },
+        },
+      },
+    },
   };
 });

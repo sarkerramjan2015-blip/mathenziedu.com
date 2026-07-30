@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { collection, getDocs, query, where, addDoc, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, where, addDoc, doc, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { exams as staticExams } from '../lib/data';
 import { useAuth } from '../lib/AuthContext';
@@ -10,13 +10,15 @@ import { formatCurrency } from '../lib/media';
 import SEO from '../components/SEO';
 import BkashPaymentSection from '../components/BkashPaymentSection';
 import type { ExamQuestion, ExamAttempt, Order } from '../lib/types';
+import type { Exam } from '../lib/types';
+import { getExamStatus } from '../lib/examStatus';
 
 export default function ExamDetails() {
   const { id } = useParams();
-  const { user, userRole } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
-  const exam = staticExams.find(e => e.id === id);
+  const [exam, setExam] = useState<Exam | null>(() => staticExams.find(e => e.id === id) || null);
   const [questions, setQuestions] = useState<ExamQuestion[]>([]);
   const [existingAttempt, setExistingAttempt] = useState<ExamAttempt | null>(null);
   const [order, setOrder] = useState<Order | null>(null);
@@ -26,22 +28,41 @@ export default function ExamDetails() {
 
   useEffect(() => {
     if (!id) return;
-    const fetchData = async () => {
-      try {
-        const q = query(collection(db, 'examQuestions'), where('examId', '==', id), orderBy('order', 'asc'));
-        const snap = await getDocs(q);
-        setQuestions(snap.docs.map(d => ({ id: d.id, ...d.data() })) as ExamQuestion[]);
+    const unsubscribe = onSnapshot(doc(db, 'exams', id), (snapshot) => {
+      if (snapshot.exists()) {
+        setExam({ id: snapshot.id, ...snapshot.data() } as Exam);
+      } else {
+        setExam(staticExams.find(e => e.id === id) || null);
+      }
+    }, () => setExam(staticExams.find(e => e.id === id) || null));
+    return unsubscribe;
+  }, [id]);
 
+  useEffect(() => {
+    if (!id) return;
+    const fetchData = async () => {
+      setLoadingQuestions(true);
+      setExistingAttempt(null);
+      setOrder(null);
+      try {
         if (user) {
+          const questionSnap = await getDocs(query(collection(db, 'examQuestions'), where('examId', '==', id)));
+          const orderedQuestions = questionSnap.docs
+            .map(document => ({ id: document.id, ...document.data() }) as ExamQuestion)
+            .sort((a, b) => a.order - b.order);
+          setQuestions(orderedQuestions);
+
           // Check existing attempts
           const attSnap = await getDocs(query(
             collection(db, 'examAttempts'),
             where('examId', '==', id),
-            where('userId', '==', user.uid),
-            orderBy('createdAt', 'desc')
+            where('userId', '==', user.uid)
           ));
           if (!attSnap.empty) {
-            setExistingAttempt(attSnap.docs[0].data() as ExamAttempt);
+            const latestAttempt = attSnap.docs
+              .map(document => ({ id: document.id, ...document.data() }) as ExamAttempt)
+              .sort((a, b) => b.createdAt - a.createdAt)[0];
+            setExistingAttempt(latestAttempt);
           }
 
           // Check existing orders for this exam
@@ -49,12 +70,16 @@ export default function ExamDetails() {
             collection(db, 'orders'),
             where('itemId', '==', id),
             where('itemType', '==', 'exam'),
-            where('userId', '==', user.uid),
-            orderBy('createdAt', 'desc')
+            where('userId', '==', user.uid)
           ));
           if (!ordSnap.empty) {
-            setOrder({ id: ordSnap.docs[0].id, ...ordSnap.docs[0].data() } as Order);
+            const latestOrder = ordSnap.docs
+              .map(document => ({ id: document.id, ...document.data() }) as Order)
+              .sort((a, b) => b.createdAt - a.createdAt)[0];
+            setOrder(latestOrder);
           }
+        } else {
+          setQuestions([]);
         }
       } catch (e) { console.error(e); }
       finally { setLoadingQuestions(false); }
@@ -86,6 +111,15 @@ export default function ExamDetails() {
       navigate('/login', { state: { from: `/exams/${id}/take` } });
       return;
     }
+    const status = getExamStatus(exam);
+    if (status !== 'live') {
+      alert(status === 'schedule_missing' ? 'Schedule not configured.' : 'Exam is not live right now.');
+      return;
+    }
+    if (existingAttempt?.status === 'in_progress') {
+      navigate(`/exams/${id}/take?attempt=${existingAttempt.id}`);
+      return;
+    }
     if (!canAccess && !isFree) {
       setShowPayment(true);
       return;
@@ -106,6 +140,7 @@ export default function ExamDetails() {
         timeSpent: 0,
         createdAt: now,
         updatedAt: now,
+        serverCreatedAt: serverTimestamp(),
       };
       try {
         const docRef = await addDoc(collection(db, 'examAttempts'), attemptData);

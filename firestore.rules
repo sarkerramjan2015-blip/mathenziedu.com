@@ -7,18 +7,58 @@ service cloud.firestore {
     }
 
     function isSignedIn() { return request.auth != null; }
-    function isInitialAdminEmail() { return request.auth != null && request.auth.token.email == 'sarkerramjan2015@gmail.com'; }
+    function isInitialAdminEmail() {
+      return request.auth != null
+        && request.auth.token.email == 'sarkerramjan2015@gmail.com'
+        && request.auth.token.email_verified == true;
+    }
     function isAdmin() { return isSignedIn() && (isInitialAdminEmail() || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'); }
     function isOwner(uid) { return isSignedIn() && request.auth.uid == uid; }
+    function emailMatchesAuth(email) { return isSignedIn() && request.auth.token.email == email; }
+    function hasVerifiedEmail() { return isSignedIn() && request.auth.token.email_verified == true; }
     function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
+
+    function isPublishedExam(data) {
+      return data.get('publishStatus', '') == 'published' || data.get('isPublished', false) == true;
+    }
+
+    function isFreeCourseEnrollment(data) {
+      return data.enrollmentType == 'free'
+        && data.status == 'active'
+        && data.progress == 0
+        && exists(/databases/$(database)/documents/courses/$(data.courseId))
+        && get(/databases/$(database)/documents/courses/$(data.courseId)).data.price == 0
+        && get(/databases/$(database)/documents/courses/$(data.courseId)).data.title == data.courseTitle;
+    }
+
+    function isValidOrderItem(data) {
+      return (
+          data.itemType == 'course'
+          && exists(/databases/$(database)/documents/courses/$(data.itemId))
+          && get(/databases/$(database)/documents/courses/$(data.itemId)).data.price == data.amount
+          && get(/databases/$(database)/documents/courses/$(data.itemId)).data.title == data.itemTitle
+        ) || (
+          data.itemType == 'book'
+          && exists(/databases/$(database)/documents/books/$(data.itemId))
+          && get(/databases/$(database)/documents/books/$(data.itemId)).data.price == data.amount
+          && get(/databases/$(database)/documents/books/$(data.itemId)).data.title == data.itemTitle
+        ) || (
+          data.itemType == 'exam'
+          && exists(/databases/$(database)/documents/exams/$(data.itemId))
+          && isPublishedExam(get(/databases/$(database)/documents/exams/$(data.itemId)).data)
+          && get(/databases/$(database)/documents/exams/$(data.itemId)).data.fee == data.amount
+          && get(/databases/$(database)/documents/exams/$(data.itemId)).data.title == data.itemTitle
+        );
+    }
 
     function isValidCategory(data) {
       return data.keys().hasAll(['title', 'description'])
         && data.title is string && data.title.size() <= 100
         && data.description is string && data.description.size() <= 1000
         && data.get('icon', '') is string && data.get('icon', '').size() <= 50
+        && data.get('coverImage', '') is string && data.get('coverImage', '').size() <= 1000
         && data.get('color', '') is string && data.get('color', '').size() <= 20
         && data.get('order', 0) is number;
     }
@@ -73,7 +113,8 @@ service cloud.firestore {
         && data.userId == request.auth.uid
         && data.email is string && data.email.size() <= 100
         && data.get('displayName', '') is string && data.get('displayName', '').size() <= 100
-        && data.get('role', '') is string && data.get('role', '').size() <= 50;
+        && data.get('role', 'student') is string
+        && data.get('role', 'student') in ['student', 'admin'];
     }
 
     function isValidArticle(data) {
@@ -116,13 +157,14 @@ service cloud.firestore {
         && data.status is string && data.status in ['in_progress', 'submitted', 'evaluated']
         && data.startedAt is number
         && data.totalMarks is number
+        && data.totalMarks > 0
         && data.answers is list
-        && data.timeSpent is number
+        && data.timeSpent is number && data.timeSpent >= 0
         && data.createdAt is number
         && data.updatedAt is number
-        && data.get('obtainedMarks', 0) is number
-        && data.get('correctCount', 0) is number
-        && data.get('wrongCount', 0) is number
+        && data.get('obtainedMarks', 0) is number && data.get('obtainedMarks', 0) >= 0 && data.get('obtainedMarks', 0) <= data.totalMarks
+        && data.get('correctCount', 0) is number && data.get('correctCount', 0) >= 0
+        && data.get('wrongCount', 0) is number && data.get('wrongCount', 0) >= 0
         && data.get('submittedAt', 0) is number;
     }
 
@@ -138,9 +180,10 @@ service cloud.firestore {
         && data.answerText is string && data.answerText.size() <= 100000
         && data.status is string && data.status in ['submitted', 'reviewed']
         && data.submittedAt is number
-        && data.get('marks', 0) is number
+        && data.get('marks', 0) is number && data.get('marks', 0) >= 0
         && data.get('feedback', '') is string && data.get('feedback', '').size() <= 5000
-        && data.get('maxMarks', 0) is number
+        && data.get('maxMarks', 0) is number && data.get('maxMarks', 0) > 0
+        && data.get('marks', 0) <= data.get('maxMarks', 0)
         && data.get('reviewedAt', 0) is number;
     }
 
@@ -163,7 +206,7 @@ service cloud.firestore {
         && data.courseTitle is string && data.courseTitle.size() <= 200
         && data.enrollmentType is string && data.enrollmentType in ['free', 'paid']
         && data.status is string && data.status in ['active', 'pending_payment', 'cancelled', 'completed']
-        && data.progress is number
+        && data.progress is number && data.progress >= 0 && data.progress <= 100
         && data.enrolledAt is number
         && data.get('mainCategory', '') is string
         && data.get('subCategory', '') is string;
@@ -176,8 +219,8 @@ service cloud.firestore {
         && data.itemType is string && data.itemType in ['course', 'book', 'exam']
         && data.itemId is string && data.itemId.size() <= 128
         && data.itemTitle is string && data.itemTitle.size() <= 200
-        && data.amount is number
-        && data.currency is string
+        && data.amount is number && data.amount > 0
+        && data.currency == 'BDT'
         && data.status is string && data.status in ['pending', 'paid', 'failed', 'cancelled']
         && data.paymentMethod is string && data.paymentMethod in ['bkash_manual', 'manual', 'sslcommerz', 'bkash', 'nagad', 'shurjopay', 'none'];
     }
@@ -203,9 +246,10 @@ service cloud.firestore {
         && data.courseId is string && data.courseId.size() <= 128
         && data.courseTitle is string && data.courseTitle.size() <= 200
         && data.enrollmentId is string && data.enrollmentId.size() <= 128
-        && data.completedLessons is number
-        && data.totalLessons is number
-        && data.progressPercent is number
+        && data.completedLessons is number && data.completedLessons >= 0
+        && data.totalLessons is number && data.totalLessons > 0
+        && data.completedLessons <= data.totalLessons
+        && data.progressPercent is number && data.progressPercent >= 0 && data.progressPercent <= 100
         && data.lastAccessedAt is number
         && data.status is string && data.status in ['not_started', 'in_progress', 'completed']
         && data.createdAt is number
@@ -248,7 +292,7 @@ service cloud.firestore {
 
     match /categories/{categoryId} {
       allow read: if true;
-      allow create: if isAdmin() && isValidId(categoryId) && isValidCategory(incoming()) && incoming().keys().size() <= 5;
+      allow create: if isAdmin() && isValidId(categoryId) && isValidCategory(incoming()) && incoming().keys().size() <= 6;
       allow update: if isAdmin() && isValidId(categoryId) && isValidCategory(incoming());
       allow delete: if isAdmin() && isValidId(categoryId);
       allow list: if true;
@@ -288,18 +332,23 @@ service cloud.firestore {
 
     // Exams — admin write, public read published exams
     match /exams/{examId} {
-      allow read: if true;
+      allow read: if isAdmin() || isPublishedExam(existing());
       allow create: if isAdmin() && isValidId(examId);
       allow update: if isAdmin() && isValidId(examId);
       allow delete: if isAdmin() && isValidId(examId);
-      allow list: if true;
     }
 
     // Enrollments — users create their own, read their own; admin full access
     match /enrollments/{enrollmentId} {
       allow read: if isSignedIn() && (request.auth.uid == resource.data.userId || isAdmin());
-      allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId && isValidId(enrollmentId) && isValidEnrollment(incoming()) && incoming().keys().size() <= 12;
-      allow update: if isAdmin();
+      allow create: if hasVerifiedEmail()
+        && request.auth.uid == incoming().userId
+        && emailMatchesAuth(incoming().userEmail)
+        && isValidId(enrollmentId)
+        && isValidEnrollment(incoming())
+        && isFreeCourseEnrollment(incoming())
+        && incoming().keys().size() <= 12;
+      allow update: if isAdmin() && isValidEnrollment(incoming());
       allow delete: if isAdmin();
       allow list: if isAdmin();
     }
@@ -307,8 +356,16 @@ service cloud.firestore {
     // Orders — users create their own, read their own; admin full access
     match /orders/{orderId} {
       allow read: if isSignedIn() && (request.auth.uid == resource.data.userId || isAdmin());
-      allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId && isValidId(orderId) && isValidOrder(incoming()) && incoming().keys().size() <= 12;
-      allow update: if isAdmin();
+      allow create: if hasVerifiedEmail()
+        && request.auth.uid == incoming().userId
+        && emailMatchesAuth(incoming().userEmail)
+        && isValidId(orderId)
+        && isValidOrder(incoming())
+        && isValidOrderItem(incoming())
+        && incoming().status == 'pending'
+        && incoming().paymentMethod == 'bkash_manual'
+        && incoming().keys().size() <= 12;
+      allow update: if isAdmin() && isValidOrder(incoming());
       allow delete: if isAdmin();
       allow list: if isAdmin();
     }
@@ -316,8 +373,19 @@ service cloud.firestore {
     // Payment Submissions — users create their own, read their own; admin full access
     match /paymentSubmissions/{submissionId} {
       allow read: if isSignedIn() && (request.auth.uid == resource.data.userId || isAdmin());
-      allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId && isValidId(submissionId) && isValidPaymentSubmission(incoming()) && incoming().keys().size() <= 8;
-      allow update: if isAdmin();
+      allow create: if hasVerifiedEmail()
+        && request.auth.uid == incoming().userId
+        && emailMatchesAuth(incoming().userEmail)
+        && isValidId(submissionId)
+        && isValidPaymentSubmission(incoming())
+        && incoming().status == 'submitted'
+        && exists(/databases/$(database)/documents/orders/$(incoming().orderId))
+        && get(/databases/$(database)/documents/orders/$(incoming().orderId)).data.userId == incoming().userId
+        && get(/databases/$(database)/documents/orders/$(incoming().orderId)).data.userEmail == incoming().userEmail
+        && get(/databases/$(database)/documents/orders/$(incoming().orderId)).data.amount == incoming().amount
+        && get(/databases/$(database)/documents/orders/$(incoming().orderId)).data.status == 'pending'
+        && incoming().keys().size() <= 9;
+      allow update: if isAdmin() && isValidPaymentSubmission(incoming());
       allow delete: if isAdmin();
       allow list: if isAdmin();
     }
@@ -334,19 +402,23 @@ service cloud.firestore {
     // Contact Messages — visitors can create, only admins can read/update/delete
     match /contactMessages/{messageId} {
       allow read: if isAdmin();
-      allow create: if isValidId(messageId) && isValidContactMessage(incoming()) && incoming().keys().size() <= 7;
-      allow update: if isAdmin();
+      allow create: if isValidId(messageId)
+        && isValidContactMessage(incoming())
+        && incoming().status == 'unread'
+        && incoming().createdAt <= request.time.toMillis() + 60000
+        && incoming().createdAt >= request.time.toMillis() - 300000
+        && incoming().keys().size() <= 7;
+      allow update: if isAdmin() && isValidContactMessage(incoming());
       allow delete: if isAdmin();
       allow list: if isAdmin();
     }
 
     // Exam Questions — admin full control, public read
     match /examQuestions/{questionId} {
-      allow read: if true;
+      allow read: if isSignedIn();
       allow create: if isAdmin() && isValidId(questionId) && isValidExamQuestion(incoming()) && incoming().keys().size() <= 9;
       allow update: if isAdmin() && isValidId(questionId) && isValidExamQuestion(incoming());
       allow delete: if isAdmin() && isValidId(questionId);
-      allow list: if true;
     }
 
     // Exam Attempts — users create own, read own; admin read all
@@ -354,10 +426,42 @@ service cloud.firestore {
     // Admin can update any field (evaluation, marks)
     match /examAttempts/{attemptId} {
       allow read: if isSignedIn() && (request.auth.uid == resource.data.userId || isAdmin());
-      allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId && isValidId(attemptId) && isValidExamAttempt(incoming()) && incoming().keys().size() <= 13;
-      allow update: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.userId && 
-        incoming().diff(existing()).affectedKeys().hasOnly(['answers', 'status', 'submittedAt', 'timeSpent', 'updatedAt']) &&
-        incoming().status == 'submitted');
+      allow create: if hasVerifiedEmail()
+        && request.auth.uid == incoming().userId
+        && emailMatchesAuth(incoming().userEmail)
+        && isValidId(attemptId)
+        && isValidExamAttempt(incoming())
+        && incoming().status == 'in_progress'
+        && incoming().answers.size() == 0
+        && incoming().timeSpent == 0
+        && incoming().startedAt <= request.time.toMillis() + 60000
+        && incoming().startedAt >= request.time.toMillis() - 300000
+        && exists(/databases/$(database)/documents/exams/$(incoming().examId))
+        && isPublishedExam(get(/databases/$(database)/documents/exams/$(incoming().examId)).data)
+        && get(/databases/$(database)/documents/exams/$(incoming().examId)).data.totalMarks == incoming().totalMarks
+        && incoming().keys().size() <= 13;
+      allow update: if isAdmin() || (
+        isSignedIn()
+        && request.auth.uid == existing().userId
+        && emailMatchesAuth(existing().userEmail)
+        && isValidExamAttempt(incoming())
+        && existing().status == 'in_progress'
+        && (
+          (
+            incoming().status == 'in_progress'
+            && incoming().timeSpent >= existing().timeSpent
+            && incoming().diff(existing()).affectedKeys().hasOnly(['answers', 'timeSpent', 'updatedAt'])
+          ) || (
+            incoming().status in ['submitted', 'evaluated']
+            && incoming().submittedAt <= request.time.toMillis() + 60000
+            && incoming().submittedAt >= request.time.toMillis() - 300000
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'answers', 'status', 'submittedAt', 'timeSpent', 'updatedAt',
+              'obtainedMarks', 'correctCount', 'wrongCount'
+            ])
+          )
+        )
+      );
       allow delete: if isAdmin();
       allow list: if isAdmin();
     }
@@ -365,8 +469,21 @@ service cloud.firestore {
     // Written Submissions — users create own, read own; admin full access for evaluation
     match /writtenSubmissions/{submissionId} {
       allow read: if isSignedIn() && (request.auth.uid == resource.data.userId || isAdmin());
-      allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId && isValidId(submissionId) && isValidWrittenSubmission(incoming()) && incoming().keys().size() <= 13;
-      allow update: if isAdmin();
+      allow create: if hasVerifiedEmail()
+        && request.auth.uid == incoming().userId
+        && emailMatchesAuth(incoming().userEmail)
+        && isValidId(submissionId)
+        && isValidWrittenSubmission(incoming())
+        && incoming().status == 'submitted'
+        && exists(/databases/$(database)/documents/examQuestions/$(incoming().questionId))
+        && get(/databases/$(database)/documents/examQuestions/$(incoming().questionId)).data.examId == incoming().examId
+        && get(/databases/$(database)/documents/examQuestions/$(incoming().questionId)).data.questionType == 'written'
+        && get(/databases/$(database)/documents/examQuestions/$(incoming().questionId)).data.marks == incoming().maxMarks
+        && getAfter(/databases/$(database)/documents/examAttempts/$(incoming().attemptId)).data.userId == incoming().userId
+        && getAfter(/databases/$(database)/documents/examAttempts/$(incoming().attemptId)).data.examId == incoming().examId
+        && getAfter(/databases/$(database)/documents/examAttempts/$(incoming().attemptId)).data.status in ['submitted', 'evaluated']
+        && incoming().keys().size() <= 13;
+      allow update: if isAdmin() && isValidWrittenSubmission(incoming());
       allow delete: if isAdmin();
       allow list: if isAdmin();
     }
@@ -413,7 +530,15 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if isOwner(userId);
-      allow create: if isOwner(userId) && isValidId(userId) && isValidUser(incoming()) && incoming().keys().size() <= 4;
+      allow create: if isOwner(userId)
+        && isValidId(userId)
+        && isValidUser(incoming())
+        && incoming().email == request.auth.token.email
+        && (
+          (isInitialAdminEmail() && incoming().role == 'admin')
+          || (!isInitialAdminEmail() && incoming().role == 'student')
+        )
+        && incoming().keys().size() <= 4;
       allow update: if isAdmin() && isValidId(userId) && isValidUser(incoming()) && incoming().diff(existing()).affectedKeys().hasOnly(['role', 'displayName']);
       allow update: if isOwner(userId) && isValidId(userId) && isValidUser(incoming()) && incoming().diff(existing()).affectedKeys().hasOnly(['displayName']);
       allow update: if isInitialAdminEmail() && isValidId(userId) && incoming().diff(existing()).affectedKeys().hasOnly(['role']);

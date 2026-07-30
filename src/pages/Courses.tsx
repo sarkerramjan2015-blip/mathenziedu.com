@@ -7,6 +7,7 @@ import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import type { Course, MainCategory, SubCategory } from '../lib/types';
 import { applyImageFallback, formatCurrency, imageWithFallback } from '../lib/media';
+import { getCourseCover } from '../lib/courseCovers';
 import SEO from '../components/SEO';
 
 export default function Courses() {
@@ -195,8 +196,8 @@ export default function Courses() {
                 key={course.id} 
                 className="bg-white/10 backdrop-blur-xl rounded-3xl overflow-hidden border border-white/20 hover:shadow-[0_0_25px_rgba(37,99,235,0.3)] hover:bg-[#1E293B]/80 transition-all duration-300 group flex flex-col h-full hover:-translate-y-2 min-w-0"
               >
-                <div className="relative h-56 overflow-hidden">
-                  <img src={imageWithFallback(course.image)} onError={applyImageFallback} alt={course.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-80 group-hover:opacity-100" />
+                <div className="relative overflow-hidden">
+                  <img src={imageWithFallback(getCourseCover(course.title, course.image))} onError={applyImageFallback} alt={`${course.title} course cover`} loading="lazy" className="h-56 w-full object-cover object-top rounded-t-3xl group-hover:scale-105 transition-transform duration-700 opacity-80 group-hover:opacity-100" />
                   <div className="absolute top-4 left-4 flex gap-1.5">
                     <span className="bg-black/40 backdrop-blur-md border border-white/10 px-2.5 py-1 rounded-full text-[10px] font-semibold text-white">
                       {course.mainCategory || course.category}
@@ -211,6 +212,16 @@ export default function Courses() {
                 </div>
                 
                 <div className="p-6 flex flex-col flex-grow relative z-10">
+                  <div className="mb-3 flex flex-wrap gap-1.5">
+                    <span className="bg-white/5 border border-white/10 px-2.5 py-1 rounded-full text-[10px] font-semibold text-slate-300">
+                      {course.mainCategory || course.category}
+                    </span>
+                    {course.subCategory && (
+                      <span className="bg-blue-500/10 border border-blue-400/20 px-2.5 py-1 rounded-full text-[10px] font-semibold text-blue-300">
+                        {course.subCategory}
+                      </span>
+                    )}
+                  </div>
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-1 text-[#F59E0B]">
                       <Star className="h-4 w-4 fill-current" />

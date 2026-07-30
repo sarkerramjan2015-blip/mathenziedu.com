@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, updateDoc, doc, query, orderBy, where } from 'firebase/firestore';
+import { collection, getDocs, doc, query, orderBy, runTransaction } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { Search, CheckCircle, XCircle, Clock, MessageSquare, Loader2, ChevronDown, ChevronUp, FileText } from 'lucide-react';
 import { L } from '../../lib/i18n';
@@ -52,37 +52,43 @@ export default function AdminExamEvaluation({ exams }: AdminExamEvaluationProps)
     const marks = parseFloat(evalForm[formKey]?.marks || '0');
     const feedback = evalForm[formKey]?.feedback || '';
     if (!sub.id) return;
+    if (!Number.isFinite(marks) || marks < 0 || marks > sub.maxMarks) {
+      alert(`Marks must be between 0 and ${sub.maxMarks}.`);
+      return;
+    }
 
     setSavingId(sub.id);
     try {
-      await updateDoc(doc(db, 'writtenSubmissions', sub.id), {
-        status: 'reviewed',
-        marks,
-        feedback,
-        reviewedAt: Date.now(),
-      });
-
-      // Check if all written submissions for this attempt are reviewed
       const attemptSubs = writtenSubs.filter(s => s.attemptId === sub.attemptId);
       const allReviewed = attemptSubs.every(s => s.id === sub.id || s.status === 'reviewed');
-      
-      if (allReviewed && sub.attemptId) {
-        // Sum marks from all reviewed submissions + the current one
-        const totalWrittenMarks = attemptSubs.reduce((sum, s) => {
-          if (s.id === sub.id) return sum + marks;
-          return sum + (s.marks || 0);
-        }, 0);
 
-        const attempt = attempts.find(a => a.id === sub.attemptId);
-        if (attempt) {
-          const mcqMarks = attempt.obtainedMarks || 0;
-          await updateDoc(doc(db, 'examAttempts', sub.attemptId), {
+      await runTransaction(db, async transaction => {
+        const attemptRef = allReviewed && sub.attemptId ? doc(db, 'examAttempts', sub.attemptId) : null;
+        const attemptSnapshot = attemptRef ? await transaction.get(attemptRef) : null;
+
+        transaction.update(doc(db, 'writtenSubmissions', sub.id!), {
+          status: 'reviewed',
+          marks,
+          feedback: feedback.trim(),
+          reviewedAt: Date.now(),
+        });
+
+        if (attemptRef && attemptSnapshot?.exists()) {
+          const attempt = attemptSnapshot.data() as ExamAttempt;
+          const totalWrittenMarks = attemptSubs.reduce((sum, submission) => (
+            sum + (submission.id === sub.id ? marks : (submission.marks || 0))
+          ), 0);
+          const mcqMarks = (attempt.answers || [])
+            .filter(answer => answer.questionType === 'mcq')
+            .reduce((sum, answer) => sum + (answer.marks || 0), 0);
+
+          transaction.update(attemptRef, {
             status: 'evaluated',
             obtainedMarks: mcqMarks + totalWrittenMarks,
             updatedAt: Date.now(),
           });
         }
-      }
+      });
 
       setEvalForm(prev => ({ ...prev, [formKey]: { marks: '', feedback: '' } }));
       fetchData();

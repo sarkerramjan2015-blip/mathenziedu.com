@@ -190,7 +190,7 @@ export default function Books() {
                     </div>
                     <div className="flex gap-2">
                       {book.isFree && (
-                        book.downloadUrl ? (
+                        book.downloadUrl && book.downloadUrl !== '#' ? (
                           <a href={book.downloadUrl} target="_blank" rel="noopener noreferrer"
                             className="flex items-center gap-1 bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 px-3 py-2 rounded-xl text-xs font-bold hover:bg-emerald-600/30 transition-all">
                             <Download className="h-3.5 w-3.5" /> Download
@@ -199,7 +199,7 @@ export default function Books() {
                           <span className="text-[10px] text-slate-500 px-2 py-1">Resource coming soon</span>
                         )
                       )}
-                      <button
+                      {!book.isFree && <button
                         onClick={async () => {
                           if (!user) { setOrderMsg({ bookId: book.id, type: 'error', text: 'Please login to purchase.' }); return; }
                           setOrdering(book.id);
@@ -213,8 +213,8 @@ export default function Books() {
                               itemTitle: book.title,
                               amount: book.price,
                               currency: 'BDT',
-                              status: book.isFree ? 'paid' : 'pending',
-                              paymentMethod: book.isFree ? 'none' : 'bkash_manual',
+                              status: 'pending',
+                              paymentMethod: 'bkash_manual',
                               createdAt: Date.now(),
                             };
                             try {
@@ -229,7 +229,7 @@ export default function Books() {
                                 throw e;
                               }
                             }
-                            setOrderMsg({ bookId: book.id, type: 'success', text: DEMO_MODE ? 'Order created! (Demo mode: saved locally only.)' : book.isFree ? 'Order created! You can access the resource.' : 'Order created! Pay via bKash and submit your transaction ID.' });
+                            setOrderMsg({ bookId: book.id, type: 'success', text: DEMO_MODE ? 'Order created! (Demo mode: saved locally only.)' : 'Order created! Pay via bKash and submit your transaction ID.' });
                           } catch {
                             setOrderMsg({ bookId: book.id, type: 'error', text: 'Something went wrong. Try again.' });
                           } finally { setOrdering(null); }
@@ -238,8 +238,8 @@ export default function Books() {
                         className="flex items-center gap-1 bg-purple-600/20 text-purple-400 border border-purple-500/30 px-3 py-2 rounded-xl text-xs font-bold hover:bg-purple-600/30 transition-all disabled:opacity-50"
                       >
                         {ordering === book.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShoppingCart className="h-3.5 w-3.5" />}
-                        {book.isFree ? 'Get' : ordering === book.id ? '...' : 'Buy'}
-                      </button>
+                        {ordering === book.id ? '...' : 'Buy'}
+                      </button>}
                     </div>
                   </div>
                   {orderMsg && orderMsg.bookId === book.id && (

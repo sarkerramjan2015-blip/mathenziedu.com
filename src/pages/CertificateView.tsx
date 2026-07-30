@@ -24,7 +24,7 @@ export default function CertificateView() {
         if (snap.exists()) {
           const data = { id: snap.id, ...snap.data() } as Certificate;
           // Check access: only cert owner or admin can view
-          if (user && (user.uid === data.userId || user.email === data.userEmail || isAdminUser(userRole, user.email))) {
+          if (user && (user.uid === data.userId || user.email === data.userEmail || isAdminUser(userRole, user.email, user.emailVerified))) {
             setCert(data);
           } else {
             setError('You do not have access to this certificate.');

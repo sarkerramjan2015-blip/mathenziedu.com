@@ -1,15 +1,40 @@
-import React, { useState } from 'react';
-import { exams } from '../lib/data';
+import React, { useEffect, useMemo, useState } from 'react';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { exams as defaultExams } from '../lib/data';
 import { Calendar, Clock, FileText, CheckCircle, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { formatCurrency } from '../lib/media';
 import SEO from '../components/SEO';
+import { db } from '../lib/firebase';
+import type { Exam } from '../lib/types';
+import { formatDhakaDateTime, getExamStatus, toDate } from '../lib/examStatus';
 
 export default function Exams() {
   const [filter, setFilter] = useState('All');
+  const [exams, setExams] = useState<Exam[]>(defaultExams);
   const examTypes = ['All', 'MCQ', 'Written'];
-  
-  const filteredExams = filter === 'All' ? exams : exams.filter(e => e.type === filter);
+
+  useEffect(() => {
+    const publishedQuery = query(collection(db, 'exams'), where('publishStatus', '==', 'published'));
+    const unsubscribe = onSnapshot(
+      publishedQuery,
+      snapshot => {
+        if (snapshot.empty) return;
+        const published = snapshot.docs
+          .map(document => ({ id: document.id, ...document.data() }) as Exam)
+          .sort((a, b) => (toDate(a.scheduledStartAt)?.getTime() ?? Number.MAX_SAFE_INTEGER) - (toDate(b.scheduledStartAt)?.getTime() ?? Number.MAX_SAFE_INTEGER));
+        setExams(published);
+      },
+      () => setExams(defaultExams),
+    );
+
+    return unsubscribe;
+  }, []);
+
+  const filteredExams = useMemo(
+    () => filter === 'All' ? exams : exams.filter(exam => exam.type === filter),
+    [exams, filter],
+  );
 
   return (
     <>
@@ -45,7 +70,20 @@ export default function Exams() {
 
         {/* Exams List */}
         <div className="space-y-6">
-          {filteredExams.map((exam) => (
+          {filteredExams.map((exam) => {
+            const status = getExamStatus(exam);
+            const statusLabel = status === 'registration_not_open'
+              ? 'Registration opens soon'
+              : status === 'registration_open'
+                ? 'Registration open'
+                : status === 'registration_closed'
+                  ? 'Registration closed'
+                  : status === 'live'
+                    ? 'Live now'
+                    : status === 'ended'
+                      ? 'Ended'
+                      : 'Schedule pending';
+            return (
             <div key={exam.id} className="bg-white/5 backdrop-blur-md rounded-3xl p-6 md:p-8 border border-white/10 hover:border-white/20 hover:bg-white/10 transition-all flex flex-col md:flex-row gap-8 items-start md:items-center shadow-xl">
               
               <div className="flex-grow">
@@ -63,6 +101,15 @@ export default function Exams() {
                       {exam.subCategory}
                     </span>
                   )}
+                  <span className={`px-3 py-1 rounded text-xs font-bold uppercase tracking-wider border ${
+                    status === 'live'
+                      ? 'bg-red-500/20 text-red-300 border-red-400/30'
+                      : status === 'registration_open'
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/30'
+                        : 'bg-white/5 text-slate-300 border-white/10'
+                  }`}>
+                    {statusLabel}
+                  </span>
                 </div>
                 
                 <h2 className="text-2xl font-bold text-white mb-5">{exam.title}</h2>
@@ -70,7 +117,7 @@ export default function Exams() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-slate-400">
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-[#10B981]" />
-                    <span className="font-medium text-slate-200">{exam.date}</span>
+                    <span className="font-medium text-slate-200">{formatDhakaDateTime(exam.scheduledStartAt)}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Clock className="h-4 w-4 text-[#F59E0B]" />
@@ -93,12 +140,12 @@ export default function Exams() {
                   <div className="text-3xl font-display font-medium text-white">{formatCurrency(exam.fee)}</div>
                 </div>
                 <Link to={`/exams/${exam.id}`} className="bg-[#10B981] hover:bg-emerald-500 text-[#0F172A] px-8 py-3 rounded-xl font-bold transition-all shadow-lg shadow-emerald-500/20 whitespace-nowrap flex items-center justify-center gap-2">
-                  Register <ChevronRight className="h-4 w-4" />
+                  {status === 'live' ? 'Start exam' : 'View details'} <ChevronRight className="h-4 w-4" />
                 </Link>
               </div>
               
             </div>
-          ))}
+          )})}
         </div>
 
       </div>

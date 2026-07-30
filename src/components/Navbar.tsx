@@ -48,6 +48,10 @@ export default function Navbar() {
     fetchNavData();
   }, []);
 
+  useEffect(() => {
+    setIsOpen(false);
+  }, [location.pathname]);
+
   const displayCategories = categories.length > 0 ? categories : MAIN_CATEGORIES_DATA;
   
   const getSubsForMain = (mainTitle: string) => {
@@ -86,17 +90,17 @@ export default function Navbar() {
       <nav className={`${DEMO_MODE && isDemo ? '' : 'sticky top-0'} z-50 w-full backdrop-blur-md bg-[#0F172A]/80 border-b border-white/10`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-20">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#2563EB] rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
+          <Link to="/" className="flex items-center gap-3 rounded-lg" aria-label="Mathemzi Edu home">
+            <span className="w-10 h-10 bg-[#2563EB] rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
               <BookOpen className="h-6 w-6 text-white" />
-            </div>
-            <Link to="/" className="font-display font-bold text-xl tracking-tight uppercase text-white hover:text-blue-400 transition-colors">
+            </span>
+            <span className="font-display font-bold text-xl tracking-tight uppercase text-white hover:text-blue-400 transition-colors">
               Mathemzi <span className="text-[#10B981]">Edu</span>
-            </Link>
-          </div>
+            </span>
+          </Link>
 
           {/* Desktop Menu */}
-          <div className="hidden lg:flex items-center space-x-6">
+          <div className="hidden xl:flex items-center gap-4 text-sm">
             <Link 
               to="/" 
               className={`font-medium transition-colors ${isActive('/') ? 'text-[#10B981]' : 'text-slate-300 hover:text-white'}`}
@@ -104,10 +108,10 @@ export default function Navbar() {
               Home
             </Link>
             <div className="relative group">
-              <button className="flex items-center gap-1 font-medium text-slate-300 hover:text-white transition-colors">
+              <button type="button" aria-haspopup="true" className="flex items-center gap-1 font-medium text-slate-300 hover:text-white transition-colors">
                 Categories <ChevronDown className="h-4 w-4" />
               </button>
-              <div className="absolute top-full left-0 mt-2 w-[650px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200" style={{ left: '-200px' }}>
+              <div className="absolute top-full left-0 mt-2 w-[650px] opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-all duration-200" style={{ left: '-200px' }}>
                 <div className="p-4 bg-[#0F172A]/95 rounded-xl shadow-2xl border border-white/10 backdrop-blur-xl">
                   <div className="grid grid-cols-5 gap-2">
                     {displayCategories.slice(0, 5).map((cat) => {
@@ -160,6 +164,12 @@ export default function Navbar() {
             >
               Exams
             </Link>
+            <Link
+              to="/articles"
+              className={`font-medium transition-colors ${isActive('/articles') ? 'text-[#10B981]' : 'text-slate-300 hover:text-white'}`}
+            >
+              Articles
+            </Link>
             <Link 
               to="/about" 
               className={`font-medium transition-colors ${isActive('/about') ? 'text-[#10B981]' : 'text-slate-300 hover:text-white'}`}
@@ -176,12 +186,12 @@ export default function Navbar() {
             <div className="flex items-center gap-4 ml-6 pl-6 border-l border-white/10">
               {user ? (
                 <div className="relative group">
-                  <button className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
+                  <button type="button" aria-haspopup="true" className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
                     <UserIcon className="h-4 w-4 text-[#10B981]" />
                     <span className="text-sm font-medium text-white max-w-[120px] truncate">{user.displayName || user.email?.split('@')[0]}</span>
                     <ChevronDown className="h-3 w-3 text-slate-400" />
                   </button>
-                  <div className="absolute right-0 top-full mt-2 w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                  <div className="absolute right-0 top-full mt-2 w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-all duration-200">
                     <div className="py-2 bg-[#0F172A] rounded-xl shadow-2xl border border-white/10 flex flex-col backdrop-blur-xl">
                       <Link to="/dashboard" className="px-4 py-2 hover:bg-white/10 text-sm font-medium text-slate-300 hover:text-white">Dashboard</Link>
                       <button onClick={handleLogout} className="text-left px-4 py-2 hover:bg-white/10 text-sm font-medium text-rose-400 hover:text-rose-300">{isDemo || isSimpleLogin ? 'Logout / লগআউট' : 'Sign Out'}</button>
@@ -189,17 +199,21 @@ export default function Navbar() {
                   </div>
                 </div>
               ) : (
-                <Link to="/login" className="px-6 py-2.5 bg-gradient-to-r from-[#2563EB] to-[#1D4ED8] rounded-full text-sm font-bold shadow-[0_0_15px_rgba(37,99,235,0.4)] hover:shadow-[0_0_25px_rgba(37,99,235,0.6)] hover:scale-105 transition-all text-white border border-blue-400/20">
-                  {isSimpleLogin ? 'Login with Gmail / প্রবেশ করুন' : 'Login'}
+                <Link to="/login" className="shrink-0 whitespace-nowrap px-5 py-2.5 bg-gradient-to-r from-[#2563EB] to-[#1D4ED8] rounded-full text-sm font-bold shadow-[0_0_15px_rgba(37,99,235,0.4)] hover:shadow-[0_0_25px_rgba(37,99,235,0.6)] hover:scale-105 transition-all text-white border border-blue-400/20">
+                  {isSimpleLogin ? 'Login / প্রবেশ' : 'Login'}
                 </Link>
               )}
             </div>
           </div>
 
           {/* Mobile menu button */}
-          <div className="flex items-center lg:hidden">
+          <div className="flex items-center xl:hidden">
             <button
+              type="button"
               onClick={() => setIsOpen(!isOpen)}
+              aria-label={isOpen ? 'Close navigation menu' : 'Open navigation menu'}
+              aria-expanded={isOpen}
+              aria-controls="mobile-navigation"
               className="text-slate-300 hover:text-white p-2"
             >
               {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -210,7 +224,7 @@ export default function Navbar() {
 
       {/* Mobile Menu */}
       {isOpen && (
-        <div className="lg:hidden bg-[#0F172A]/95 backdrop-blur-xl border-b border-white/10">
+        <div id="mobile-navigation" className="xl:hidden bg-[#0F172A]/95 backdrop-blur-xl border-b border-white/10">
           <div className="px-4 pt-2 pb-6 space-y-1">
             <Link to="/" onClick={() => setIsOpen(false)} className={`block px-3 py-3 rounded-md text-base font-medium ${isActive('/') ? 'text-[#10B981] bg-white/5' : 'text-white hover:bg-white/5'}`}>Home</Link>
             <Link to="/courses" onClick={() => setIsOpen(false)} className={`block px-3 py-3 rounded-md text-base font-medium ${isActive('/courses') ? 'text-[#10B981] bg-white/5' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}>Courses</Link>
@@ -229,7 +243,7 @@ export default function Navbar() {
                 </>
               ) : (
                 <Link to="/login" onClick={() => setIsOpen(false)} className="w-full text-center bg-gradient-to-r from-[#2563EB] to-[#1D4ED8] shadow-[0_0_15px_rgba(37,99,235,0.4)] text-white px-4 py-2.5 rounded-full font-bold">
-                  {isSimpleLogin ? 'Login with Gmail' : 'Login'}
+                  {isSimpleLogin ? 'Login / প্রবেশ' : 'Login'}
                 </Link>
               )}
             </div>

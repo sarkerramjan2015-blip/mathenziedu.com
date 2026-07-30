@@ -54,7 +54,7 @@ const defaultSettings: SiteSettings = {
   seoTitle: 'Mathemzi Edu | Premium Mathematics Learning Platform in Bangladesh',
   seoDescription: 'Master Mathematics for School, Olympiad & Admission Success. Bangladesh-focused mathematics learning ecosystem.',
   seoKeywords: 'mathematics learning Bangladesh, math courses, olympiad preparation, admission math',
-  seoOgImage: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?q=80&w=1600&auto=format&fit=crop',
+  seoOgImage: 'https://mathemziedu.com/og.png',
   footerText: 'Master Mathematics with Logic, Practice & Confidence. Your complete Bangladesh-focused learning ecosystem.',
   updatedAt: Date.now(),
 };

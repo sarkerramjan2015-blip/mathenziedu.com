@@ -12,7 +12,7 @@ interface SEOProps {
 
 const SITE_NAME = 'Mathemzi Edu';
 const BASE_URL = 'https://mathemziedu.com';
-const DEFAULT_OG_IMAGE = 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?q=80&w=1600&auto=format&fit=crop';
+const DEFAULT_OG_IMAGE = `${BASE_URL}/og.png`;
 
 export default function SEO({ 
   title, 
@@ -36,6 +36,9 @@ export default function SEO({
       <meta property="og:title" content={fullTitle} />
       <meta property="og:description" content={description} />
       <meta property="og:image" content={ogImage} />
+      <meta property="og:image:alt" content={`${SITE_NAME} mathematics learning platform`} />
+      <meta property="og:image:width" content="1200" />
+      <meta property="og:image:height" content="630" />
       <meta property="og:url" content={url} />
       <meta property="og:type" content={ogType} />
       <meta property="og:site_name" content={SITE_NAME} />
@@ -45,6 +48,7 @@ export default function SEO({
       <meta name="twitter:title" content={fullTitle} />
       <meta name="twitter:description" content={description} />
       <meta name="twitter:image" content={ogImage} />
+      <meta name="twitter:image:alt" content={`${SITE_NAME} mathematics learning platform`} />
     </Helmet>
   );
 }

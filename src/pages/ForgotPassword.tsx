@@ -16,14 +16,11 @@ export default function ForgotPassword() {
     setError('');
     setLoading(true);
     try {
-      await sendPasswordResetEmail(auth, email);
+      await sendPasswordResetEmail(auth, email.trim());
       setSent(true);
-    } catch (err: any) {
-      if (err.code === 'auth/user-not-found') {
-        setError('No account found with this email address.');
-      } else {
-        setError(err.message || 'Failed to send reset email.');
-      }
+    } catch {
+      // Use the same result for unknown emails so account existence is never exposed.
+      setSent(true);
     } finally {
       setLoading(false);
     }
@@ -51,7 +48,7 @@ export default function ForgotPassword() {
                 </div>
                 <h2 className="text-2xl font-bold text-white mb-2">Check Your Email</h2>
                 <p className="text-slate-400 text-sm mb-6">
-                  A password reset link has been sent to <strong className="text-white">{email}</strong>. Please check your inbox and follow the instructions.
+                    If an account exists for <strong className="text-white">{email}</strong>, a password reset link has been sent. Please check your inbox.
                 </p>
                 <p className="text-xs text-slate-500 mb-8">Didn't receive it? Check your spam folder or try again.</p>
                 <Link to="/login" className="inline-block bg-[#2563EB] text-white font-bold px-8 py-3 rounded-xl hover:bg-blue-500 transition-all shadow-lg">
@@ -72,7 +69,7 @@ export default function ForgotPassword() {
                 <form onSubmit={handleReset} className="space-y-6">
                   <div>
                     <label htmlFor="reset-email" className="block text-sm font-bold uppercase tracking-wider text-slate-400 mb-2">Email address</label>
-                    <input id="reset-email" type="email" value={email} onChange={e => setEmail(e.target.value)} required
+                    <input id="reset-email" type="email" value={email} onChange={e => setEmail(e.target.value)} required maxLength={100} autoComplete="email"
                       className="appearance-none block w-full px-4 py-3 bg-black/20 border border-white/10 rounded-xl shadow-inner placeholder-slate-500 focus:outline-none focus:ring-[#2563EB] focus:border-[#2563EB] text-white sm:text-sm"
                       placeholder="you@example.com" />
                   </div>

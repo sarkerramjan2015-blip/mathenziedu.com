@@ -8,7 +8,7 @@ import SEO from '../components/SEO';
 export default function Contact() {
   const cfg = useSiteSettings();
   const info = { phone: cfg.phone, email: cfg.email, address: cfg.address };
-  const [formData, setFormData] = useState({ name: '', email: '', phone: '', subject: '', message: '' });
+  const [formData, setFormData] = useState({ name: '', email: '', phone: '', subject: 'Course Counselling', message: '' });
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -29,7 +29,7 @@ export default function Contact() {
         status: 'unread',
       });
       setStatus('success');
-      setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
+      setFormData({ name: '', email: '', phone: '', subject: 'Course Counselling', message: '' });
     } catch (error) {
       console.error('Contact form error:', error);
       setStatus('error');
@@ -77,19 +77,19 @@ export default function Contact() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <label className="block">
                 <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-400">Name *</span>
-                <input required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})}
+                <input required maxLength={100} autoComplete="name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})}
                   className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]" placeholder="Your name" />
               </label>
               <label className="block">
                 <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-400">Email *</span>
-                <input required type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})}
+                <input required type="email" maxLength={100} autoComplete="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})}
                   className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]" placeholder="your@email.com" />
               </label>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
               <label className="block">
                 <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-400">Phone (optional)</span>
-                <input value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})}
+                <input type="tel" maxLength={20} autoComplete="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})}
                   className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]" placeholder="+880 1XXX XXXXXXX" />
               </label>
               <label className="block">
@@ -106,7 +106,7 @@ export default function Contact() {
             </div>
             <label className="mt-4 block">
               <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-400">Message *</span>
-              <textarea required rows={5} value={formData.message} onChange={e => setFormData({...formData, message: e.target.value})}
+              <textarea required rows={5} maxLength={5000} value={formData.message} onChange={e => setFormData({...formData, message: e.target.value})}
                 className="w-full resize-none rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]" placeholder="Write your message..." />
             </label>
 
@@ -116,12 +116,12 @@ export default function Contact() {
             </button>
 
             {status === 'success' && (
-              <div className="mt-4 rounded-xl border border-[#10B981]/20 bg-[#10B981]/10 px-4 py-3 text-sm font-medium text-[#10B981] flex items-center gap-2">
+              <div role="status" aria-live="polite" className="mt-4 rounded-xl border border-[#10B981]/20 bg-[#10B981]/10 px-4 py-3 text-sm font-medium text-[#10B981] flex items-center gap-2">
                 <CheckCircle className="h-4 w-4" /> Message sent successfully. We'll get back to you soon.
               </div>
             )}
             {status === 'error' && (
-              <div className="mt-4 rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-400 flex items-center gap-2">
+              <div role="alert" className="mt-4 rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-400 flex items-center gap-2">
                 <AlertCircle className="h-4 w-4" /> Something went wrong. Please try again or email us directly.
               </div>
             )}

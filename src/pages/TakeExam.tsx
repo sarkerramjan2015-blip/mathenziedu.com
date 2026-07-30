@@ -1,18 +1,32 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
-import { collection, getDocs, query, where, orderBy, getDoc, doc, updateDoc, addDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, getDoc, doc, updateDoc, onSnapshot, writeBatch } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { exams as staticExams } from '../lib/data';
 import { useAuth } from '../lib/AuthContext';
 import { DEMO_MODE, addDemoLocalData, updateDemoLocalData, isPermissionError } from '../lib/demo';
 import { Clock, AlertCircle, CheckCircle, XCircle, Loader2, ChevronLeft, ChevronRight, Send, HelpCircle } from 'lucide-react';
 import SEO from '../components/SEO';
-import type { ExamQuestion, ExamAttempt, ExamAnswer } from '../lib/types';
+import type { ExamQuestion, ExamAttempt, ExamAnswer, Exam } from '../lib/types';
+import { getExamDurationMinutes, getExamStatus } from '../lib/examStatus';
 
 function parseDuration(duration: string): number {
   const match = duration.match(/(\d+)/);
   if (match) return parseInt(match[1]) * 60; // convert minutes to seconds
   return 3600; // default 1 hour
+}
+
+function toExamAnswer(
+  question: ExamQuestion,
+  answer?: { selectedOption?: number; answerText?: string },
+): ExamAnswer {
+  const result: ExamAnswer = {
+    questionId: question.id || '',
+    questionType: question.questionType,
+  };
+  if (typeof answer?.selectedOption === 'number') result.selectedOption = answer.selectedOption;
+  if (typeof answer?.answerText === 'string') result.answerText = answer.answerText;
+  return result;
 }
 
 export default function TakeExam() {
@@ -21,7 +35,7 @@ export default function TakeExam() {
   const attemptId = searchParams.get('attempt');
   const { user } = useAuth();
 
-  const exam = staticExams.find(e => e.id === id);
+  const [exam, setExam] = useState<Exam | null>(() => staticExams.find(e => e.id === id) || null);
   const [questions, setQuestions] = useState<ExamQuestion[]>([]);
   const [attempt, setAttempt] = useState<ExamAttempt | null>(null);
   const [loading, setLoading] = useState(true);
@@ -29,6 +43,15 @@ export default function TakeExam() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!id) return;
+    const unsubscribe = onSnapshot(doc(db, 'exams', id), (snapshot) => {
+      if (snapshot.exists()) setExam({ id: snapshot.id, ...snapshot.data() } as Exam);
+      else setExam(staticExams.find(e => e.id === id) || null);
+    }, () => setExam(staticExams.find(e => e.id === id) || null));
+    return unsubscribe;
+  }, [id]);
 
   // Answers state
   const [answers, setAnswers] = useState<Record<string, { selectedOption?: number; answerText?: string }>>({});
@@ -49,18 +72,20 @@ export default function TakeExam() {
     const fetchData = async () => {
       try {
         // Fetch questions
-        const qSnap = await getDocs(query(
-          collection(db, 'examQuestions'),
-          where('examId', '==', id),
-          orderBy('order', 'asc')
-        ));
-        const qList = qSnap.docs.map(d => ({ id: d.id, ...d.data() })) as ExamQuestion[];
+        const qSnap = await getDocs(query(collection(db, 'examQuestions'), where('examId', '==', id)));
+        const qList = qSnap.docs
+          .map(document => ({ id: document.id, ...document.data() }) as ExamQuestion)
+          .sort((a, b) => a.order - b.order);
         setQuestions(qList);
 
         if (attemptId) {
           const attSnap = await getDoc(doc(db, 'examAttempts', attemptId));
           if (attSnap.exists()) {
             const attData = { id: attSnap.id, ...attSnap.data() } as ExamAttempt;
+            if (attData.userId !== user.uid || attData.examId !== id) {
+              setError('This exam attempt does not match your account or the selected exam.');
+              return;
+            }
             setAttempt(attData);
 
             // Restore answers from existing attempt
@@ -86,8 +111,13 @@ export default function TakeExam() {
                 });
               }
             } else {
+              const examStatus = exam ? getExamStatus(exam) : 'schedule_missing';
+              if (examStatus !== 'live') {
+                setError(examStatus === 'ended' ? 'Exam has ended.' : 'Exam is not live right now.');
+                return;
+              }
               // Calculate remaining time
-              const durationSec = parseDuration(exam?.duration || '60 Mins');
+              const durationSec = exam ? getExamDurationMinutes(exam) * 60 : parseDuration('60 Mins');
               const elapsed = Math.floor((Date.now() - attData.startedAt) / 1000);
               const remaining = Math.max(0, durationSec - elapsed);
               setTimeLeft(remaining);
@@ -101,7 +131,7 @@ export default function TakeExam() {
       finally { setLoading(false); }
     };
     fetchData();
-  }, [id, user, attemptId, exam?.duration]);
+  }, [id, user, attemptId, exam]);
 
   const handleSubmitRef = useRef<(autoSubmit: boolean) => Promise<void>>(async () => {});
 
@@ -123,6 +153,37 @@ export default function TakeExam() {
     return () => clearInterval(interval);
   }, [startTime, submitted, attemptId]);
 
+  // Save answers shortly after each change so a refresh does not erase the student's work.
+  useEffect(() => {
+    if (!attemptId || !attempt || attempt.status !== 'in_progress' || submitted || questions.length === 0 || Object.keys(answers).length === 0) return;
+
+    const timeout = window.setTimeout(async () => {
+      const savedAnswers = questions.map(question => toExamAnswer(question, answers[question.id || '']));
+
+      try {
+        await updateDoc(doc(db, 'examAttempts', attemptId), {
+          answers: savedAnswers,
+          updatedAt: Date.now(),
+        });
+      } catch (saveError) {
+        if (DEMO_MODE && isPermissionError(saveError)) {
+          updateDemoLocalData('examAttempts', attemptId, { answers: savedAnswers, updatedAt: Date.now() });
+        }
+      }
+    }, 800);
+
+    return () => window.clearTimeout(timeout);
+  }, [answers, attempt, attemptId, questions, submitted]);
+
+  useEffect(() => {
+    if (!attempt || attempt.status !== 'in_progress' || submitted) return;
+    const warnBeforeLeaving = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+    };
+    window.addEventListener('beforeunload', warnBeforeLeaving);
+    return () => window.removeEventListener('beforeunload', warnBeforeLeaving);
+  }, [attempt, submitted]);
+
   const handleAnswer = (questionId: string, value: { selectedOption?: number; answerText?: string }) => {
     if (submitted) return;
     setAnswers(prev => ({ ...prev, [questionId]: value }));
@@ -130,22 +191,13 @@ export default function TakeExam() {
 
   const handleSubmit = async (autoSubmit = false) => {
     if (!attemptId || !user || !exam || questions.length === 0) return;
-    if (!autoSubmit && !window.confirm('Are you sure you want to submit your exam? You cannot change answers after submission.')) return;
 
     setSubmitting(true);
     setError('');
 
     try {
       // Build answers array
-      const answeredList: ExamAnswer[] = questions.map(q => {
-        const ans = answers[q.id || ''];
-        return {
-          questionId: q.id || '',
-          questionType: q.questionType,
-          selectedOption: ans?.selectedOption,
-          answerText: ans?.answerText,
-        };
-      });
+      const answeredList = questions.map(question => toExamAnswer(question, answers[question.id || '']));
 
       // Auto-evaluate MCQ
       let mcqMarks = 0;
@@ -181,44 +233,54 @@ export default function TakeExam() {
         timeSpent,
         correctCount,
         wrongCount,
+        obtainedMarks: mcqMarks,
         updatedAt: Date.now(),
       };
 
-      if (!hasWrittenQuestions) {
-        updateData.obtainedMarks = mcqMarks;
-      }
-
       try {
-        await updateDoc(attemptRef, updateData as Record<string, unknown>);
+        const batch = writeBatch(db);
+        batch.update(attemptRef, updateData as Record<string, unknown>);
+
+        for (const writtenQuestion of writtenQuestions) {
+          const submissionId = `${attemptId}_${writtenQuestion.id || 'written'}`;
+          const submissionRef = doc(db, 'writtenSubmissions', submissionId);
+          batch.set(submissionRef, {
+            userId: user.uid,
+            userEmail: user.email || '',
+            examId: id || '',
+            examTitle: exam.title,
+            attemptId,
+            questionId: writtenQuestion.id || '',
+            questionText: writtenQuestion.questionText,
+            answerText: answers[writtenQuestion.id || '']?.answerText || '',
+            status: 'submitted',
+            maxMarks: writtenQuestion.marks,
+            submittedAt: Date.now(),
+          });
+        }
+
+        await batch.commit();
       } catch (e) {
         if (DEMO_MODE && isPermissionError(e)) {
           updateDemoLocalData('examAttempts', attemptId, updateData as any);
+          for (const writtenQuestion of writtenQuestions) {
+            addDemoLocalData('writtenSubmissions', {
+              id: `${attemptId}_${writtenQuestion.id || 'written'}`,
+              userId: user.uid,
+              userEmail: user.email || '',
+              examId: id || '',
+              examTitle: exam.title,
+              attemptId,
+              questionId: writtenQuestion.id || '',
+              questionText: writtenQuestion.questionText,
+              answerText: answers[writtenQuestion.id || '']?.answerText || '',
+              status: 'submitted',
+              maxMarks: writtenQuestion.marks,
+              submittedAt: Date.now(),
+            });
+          }
         } else {
           throw e;
-        }
-      }
-
-      // Create written submissions
-      for (const wq of writtenQuestions) {
-        const subData = {
-          userId: user.uid,
-          userEmail: user.email || '',
-          examId: id || '',
-          examTitle: exam.title,
-          attemptId,
-          questionId: wq.id || '',
-          questionText: wq.questionText,
-          answerText: answers[wq.id || '']?.answerText || '',
-          status: 'submitted',
-          maxMarks: wq.marks,
-          submittedAt: Date.now(),
-        };
-        try {
-          await addDoc(collection(db, 'writtenSubmissions'), subData);
-        } catch (e) {
-          if (DEMO_MODE && isPermissionError(e)) {
-            addDemoLocalData('writtenSubmissions', subData);
-          }
         }
       }
 
