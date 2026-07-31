@@ -1,5 +1,6 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
+import { useSiteSettings } from '../lib/useSiteConfig';
 
 interface SEOProps {
   title: string;
@@ -10,7 +11,6 @@ interface SEOProps {
   keywords?: string;
 }
 
-const SITE_NAME = 'Mathemzi Edu';
 const BASE_URL = (import.meta.env.VITE_SITE_URL || 'https://mathemziedu.vercel.app').replace(/\/$/, '');
 const DEFAULT_OG_IMAGE = `${BASE_URL}/og.png`;
 
@@ -22,7 +22,10 @@ export default function SEO({
   path = '',
   keywords,
 }: SEOProps) {
-  const fullTitle = title.includes(SITE_NAME) ? title : `${title} | ${SITE_NAME}`;
+  const site = useSiteSettings();
+  const siteName = site.name || 'Mathemzi Edu';
+  const effectiveOgImage = ogImage === DEFAULT_OG_IMAGE && site.seoOgImage ? site.seoOgImage : ogImage;
+  const fullTitle = title.includes(siteName) ? title : `${title} | ${siteName}`;
   const url = `${BASE_URL}${path}`;
 
   return (
@@ -35,20 +38,20 @@ export default function SEO({
       {/* Open Graph */}
       <meta property="og:title" content={fullTitle} />
       <meta property="og:description" content={description} />
-      <meta property="og:image" content={ogImage} />
-      <meta property="og:image:alt" content={`${SITE_NAME} mathematics learning platform`} />
+      <meta property="og:image" content={effectiveOgImage} />
+      <meta property="og:image:alt" content={`${siteName} mathematics learning platform`} />
       <meta property="og:image:width" content="1200" />
       <meta property="og:image:height" content="630" />
       <meta property="og:url" content={url} />
       <meta property="og:type" content={ogType} />
-      <meta property="og:site_name" content={SITE_NAME} />
+      <meta property="og:site_name" content={siteName} />
 
       {/* Twitter Card */}
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content={fullTitle} />
       <meta name="twitter:description" content={description} />
-      <meta name="twitter:image" content={ogImage} />
-      <meta name="twitter:image:alt" content={`${SITE_NAME} mathematics learning platform`} />
+      <meta name="twitter:image" content={effectiveOgImage} />
+      <meta name="twitter:image:alt" content={`${siteName} mathematics learning platform`} />
     </Helmet>
   );
 }

@@ -370,6 +370,7 @@ export interface SiteSettings {
   // Homepage
   heroTitle: string;
   heroSubtitle: string;
+  heroBadge: string;
   heroBtn1Text: string;
   heroBtn1Link: string;
   heroBtn2Text: string;
@@ -378,6 +379,17 @@ export interface SiteSettings {
   heroBtn3Link: string;
   trustSectionTitle: string;
   trustSectionItems: string[];
+  // About page
+  aboutTitle: string;
+  aboutIntro: string;
+  missionTitle: string;
+  missionText: string;
+  visionTitle: string;
+  visionText: string;
+  aboutFeatures: string[];
+  // Contact page
+  contactPageTitle: string;
+  contactPageSubtitle: string;
   // Contact
   contactPhone: string;
   contactEmail: string;
@@ -400,6 +412,13 @@ export interface SiteSettings {
   seoDescription: string;
   seoKeywords: string;
   seoOgImage: string;
+  // Policies
+  privacyIntro: string;
+  privacyDataText: string;
+  privacySecurityText: string;
+  termsIntro: string;
+  termsAccessText: string;
+  termsPaymentsText: string;
   // Footer
   footerText: string;
   updatedAt: number;

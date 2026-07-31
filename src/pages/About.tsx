@@ -2,8 +2,10 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { Target, Eye, Heart, Users, Zap, BookOpen } from 'lucide-react';
 import SEO from '../components/SEO';
+import { useSiteSettings } from '../lib/useSiteConfig';
 
 export default function About() {
+  const site = useSiteSettings();
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -32,9 +34,9 @@ export default function About() {
           transition={{ duration: 0.6 }}
           className="text-center mb-20"
         >
-          <h1 className="text-4xl md:text-6xl font-extrabold text-white mb-6">About <span className="text-[#10B981]">Mathemzi Edu</span></h1>
+          <h1 className="text-4xl md:text-6xl font-extrabold text-white mb-6">{site.aboutTitle}</h1>
           <p className="text-lg md:text-xl max-w-3xl mx-auto leading-relaxed">
-            Welcome to Mathemzi Edu. We believe in learning mathematics with logic, beauty, faith, and real-life applications.
+            {site.aboutIntro}
           </p>
         </motion.div>
 
@@ -50,10 +52,10 @@ export default function About() {
               <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center border border-blue-500/30">
                 <Target className="h-6 w-6 text-blue-400" />
               </div>
-              <h2 className="text-2xl font-bold text-white">Our Mission</h2>
+              <h2 className="text-2xl font-bold text-white">{site.missionTitle}</h2>
             </div>
             <p className="leading-relaxed">
-              To provide a comprehensive, engaging, and premium platform where students and professionals can master mathematical concepts. We strive to break down complex problems into understandable, logical steps that foster true comprehension and love for the subject.
+              {site.missionText}
             </p>
           </motion.div>
 
@@ -62,10 +64,10 @@ export default function About() {
               <div className="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center border border-amber-500/30">
                 <Eye className="h-6 w-6 text-amber-400" />
               </div>
-              <h2 className="text-2xl font-bold text-white">Our Vision</h2>
+              <h2 className="text-2xl font-bold text-white">{site.visionTitle}</h2>
             </div>
             <p className="leading-relaxed">
-              To become the leading global digital platform for mathematical learning that integrates logic, faith, and real-world utility, empowering individuals to reach their full potential and achieve academic and career excellence.
+              {site.visionText}
             </p>
           </motion.div>
         </motion.div>
@@ -128,14 +130,7 @@ export default function About() {
               Key Features
             </h2>
             <ul className="space-y-4">
-              {[
-                "Advanced Learning Management System (LMS)",
-                "Interactive video lessons and live classes",
-                "Practice exams with real-time analytics",
-                "Public speaking and confidence-building training",
-                "Detailed progress tracking and personalized feedback",
-                "Integration of Mathematics and Islamic history",
-              ].map((feature, i) => (
+              {site.aboutFeatures.map((feature, i) => (
                 <li key={i} className="flex items-center gap-3 bg-white/5 border border-white/10 p-4 rounded-xl hover:bg-white/10 transition-colors">
                   <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
                   <span className="font-medium text-white">{feature}</span>

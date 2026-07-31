@@ -48,9 +48,9 @@ export default function Contact() {
           <div className="inline-flex items-center gap-2 rounded-full border border-[#10B981]/30 bg-[#10B981]/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-[#10B981] mb-5">
             Student Support
           </div>
-          <h1 className="text-4xl sm:text-5xl font-display font-extrabold text-white mb-4">Talk to Mathemzi Edu</h1>
+          <h1 className="text-4xl sm:text-5xl font-display font-extrabold text-white mb-4">{cfg.contactPageTitle}</h1>
           <p className="text-lg text-slate-300 leading-relaxed">
-            Course guidance, exam registration, mentor support, or partnership questions. Send a note and the team will follow up.
+            {cfg.contactPageSubtitle}
           </p>
         </div>
 

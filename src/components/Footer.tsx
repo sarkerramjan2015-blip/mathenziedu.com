@@ -1,12 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { BookOpen, Facebook, Twitter, Instagram, Youtube, Mail, Phone, MapPin } from 'lucide-react';
-import { SOCIAL_LINKS, CONTACT_INFO } from '../lib/config';
 import { useSiteSettings } from '../lib/useSiteConfig';
 
 export default function Footer() {
   const cfg = useSiteSettings();
-  const social = { facebook: cfg.facebookUrl, youtube: cfg.youtubeUrl, instagram: cfg.instagramUrl, twitter: SOCIAL_LINKS.twitter };
+  const social = { facebook: cfg.facebookUrl, youtube: cfg.youtubeUrl, instagram: cfg.instagramUrl, twitter: cfg.twitterUrl };
   const contact = { phone: cfg.phone, email: cfg.email, address: cfg.address };
   return (
     <footer className="relative z-10 border-t border-white/10 bg-[#0F172A]/80 backdrop-blur-xl text-white pt-20 pb-10">
@@ -14,10 +13,8 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
           <div className="space-y-6">
             <div className="flex items-center gap-2">
-              <BookOpen className="h-8 w-8 text-[#10B981]" />
-              <span className="font-display font-bold text-2xl">
-                Mathemzi<span className="text-[#10B981]">Edu</span>
-              </span>
+              {cfg.logoUrl ? <img src={cfg.logoUrl} alt="" className="h-10 w-10 rounded-xl object-cover" /> : <BookOpen className="h-8 w-8 text-[#10B981]" />}
+              <span className="font-display font-bold text-2xl">{cfg.name}</span>
             </div>
             <p className="text-slate-400 text-sm leading-relaxed">
               {cfg.footerText}
@@ -88,7 +85,7 @@ export default function Footer() {
 
         <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-slate-400 text-sm font-medium">
-            © {new Date().getFullYear()} Mathemzi Edu. All rights reserved.
+            © {new Date().getFullYear()} {cfg.name}. All rights reserved.
           </p>
           <div className="flex gap-6 text-sm font-medium text-slate-400">
             <Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>

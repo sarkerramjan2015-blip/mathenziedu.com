@@ -1,80 +1,226 @@
-import React, { useState, useEffect } from 'react';
-import { Users, BookOpen, Settings, LayoutDashboard, DollarSign, Calendar, LogOut, ChevronRight, Search, Filter, FileText, BookMarked, CreditCard, ClipboardList, HelpCircle, CheckSquare, Award, Mail, Shield, UserCheck, Eye } from 'lucide-react';
-import { adminStats, exams, courses as defaultCourses } from '../lib/data';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import {
+  AlertCircle,
+  Award,
+  BookMarked,
+  BookOpen,
+  Calendar,
+  CheckCircle,
+  CheckSquare,
+  ChevronRight,
+  ClipboardCheck,
+  CreditCard,
+  ExternalLink,
+  FileQuestion,
+  FileText,
+  Filter,
+  Gauge,
+  HelpCircle,
+  LayoutDashboard,
+  Loader2,
+  LogOut,
+  Mail,
+  MessageSquare,
+  Search,
+  Settings,
+  ShieldCheck,
+  Sparkles,
+  UserCog,
+  Users,
+  WalletCards,
+  X,
+} from 'lucide-react';
+import { collection, getDocs, onSnapshot } from 'firebase/firestore';
+import { auth, db } from '../lib/firebase';
+import { adminStats, courses as defaultCourses, exams } from '../lib/data';
+import { formatCurrency } from '../lib/media';
+import { clearDemoSession, DEMO_MODE } from '../lib/demo';
+import { useAuth } from '../lib/AuthContext';
+import { useSiteSettings } from '../lib/useSiteConfig';
 import AdminArticles from '../components/admin/AdminArticles';
-import AdminCategories from '../components/admin/AdminCategories';
-import AdminCourses from '../components/admin/AdminCourses';
 import AdminBooks from '../components/admin/AdminBooks';
-import AdminEnrollments from '../components/admin/AdminEnrollments';
-import AdminExamQuestions from '../components/admin/AdminExamQuestions';
-import AdminExams from '../components/admin/AdminExams';
-import AdminExamEvaluation from '../components/admin/AdminExamEvaluation';
+import AdminCategories from '../components/admin/AdminCategories';
 import AdminCertificates from '../components/admin/AdminCertificates';
 import AdminContactMessages from '../components/admin/AdminContactMessages';
+import AdminCourses from '../components/admin/AdminCourses';
+import AdminEnrollments from '../components/admin/AdminEnrollments';
+import AdminExamEvaluation from '../components/admin/AdminExamEvaluation';
+import AdminExamQuestions from '../components/admin/AdminExamQuestions';
+import AdminExams from '../components/admin/AdminExams';
 import AdminSiteSettings from '../components/admin/AdminSiteSettings';
-import { auth } from '../lib/firebase';
-import { useNavigate } from 'react-router-dom';
-import { formatCurrency } from '../lib/media';
-import { L } from '../lib/i18n';
-import { DEMO_MODE, clearDemoSession } from '../lib/demo';
-import { useAuth } from '../lib/AuthContext';
-import { collection, getDocs, query, orderBy, where, onSnapshot } from 'firebase/firestore';
-import { db } from '../lib/firebase';
-import type { AdminAnalyticsSummary, Enrollment, Order, PaymentSubmission, ExamAttempt, WrittenSubmission, Certificate, Course, Exam } from '../lib/types';
+import AdminStudents from '../components/admin/AdminStudents';
+import type {
+  AdminAnalyticsSummary,
+  Enrollment,
+  Exam,
+  ExamAttempt,
+  Order,
+} from '../lib/types';
+
+type AdminTabId =
+  | 'overview'
+  | 'courses'
+  | 'books'
+  | 'articles'
+  | 'categories'
+  | 'exams'
+  | 'exam_questions'
+  | 'exam_evaluation'
+  | 'certificates'
+  | 'enrollments'
+  | 'students'
+  | 'contact_messages'
+  | 'settings';
+
+interface AdminNavItem {
+  id: AdminTabId;
+  label: string;
+  shortLabel: string;
+  description: string;
+  guide: string;
+  keywords: string;
+  icon: React.ElementType;
+}
+
+const NAV_GROUPS: Array<{ label: string; items: AdminNavItem[] }> = [
+  {
+    label: 'শুরু করুন',
+    items: [
+      {
+        id: 'overview',
+        label: 'কন্ট্রোল সেন্টার',
+        shortLabel: 'Overview',
+        description: 'আজকের গুরুত্বপূর্ণ কাজ ও পুরো সাইটের অবস্থা',
+        guide: 'যে কাজটি করতে চান, নিচের বড় কার্ড থেকে সেটি বেছে নিন।',
+        keywords: 'home dashboard overview status শুরু আজ কাজ',
+        icon: LayoutDashboard,
+      },
+    ],
+  },
+  {
+    label: 'কনটেন্ট',
+    items: [
+      { id: 'courses', label: 'কোর্স', shortLabel: 'Courses', description: 'কোর্স যোগ, মূল্য ও তথ্য পরিবর্তন', guide: '“নতুন কোর্স” চাপুন, প্রয়োজনীয় তথ্য দিন, তারপর সেভ করুন।', keywords: 'course class price শিক্ষক fee কোর্স মূল্য', icon: BookOpen },
+      { id: 'books', label: 'বই ও PDF', shortLabel: 'Books', description: 'বই, মূল্য ও download link', guide: 'বইটি Free না Paid তা বেছে নিয়ে cover ও download link দিন।', keywords: 'book pdf download price free বই', icon: BookMarked },
+      { id: 'articles', label: 'আর্টিকেল', shortLabel: 'Articles', description: 'Blog ও শিক্ষামূলক লেখা', guide: 'শিরোনাম, ছোট পরিচিতি ও পুরো লেখাটি দিয়ে সেভ করুন।', keywords: 'article blog post লেখা আর্টিকেল', icon: FileText },
+      { id: 'categories', label: 'ক্যাটাগরি', shortLabel: 'Categories', description: 'Menu ও content grouping', guide: 'আগে Main Category তৈরি করুন, তারপর তার ভেতরে Subcategory যোগ করুন।', keywords: 'category menu subject বিভাগ ক্যাটাগরি', icon: Filter },
+    ],
+  },
+  {
+    label: 'পরীক্ষা',
+    items: [
+      { id: 'exams', label: 'পরীক্ষা ও সময়সূচি', shortLabel: 'Exams', description: 'Exam date, fee ও publish status', guide: 'সময়সূচি পূরণ করে Draft হিসেবে সেভ করুন; যাচাই শেষে Published করুন।', keywords: 'exam schedule date fee publish পরীক্ষা সময়সূচি', icon: Calendar },
+      { id: 'exam_questions', label: 'প্রশ্নপত্র', shortLabel: 'Questions', description: 'MCQ ও written question যোগ করুন', guide: 'প্রথমে পরীক্ষা বেছে নিন, তারপর একে একে প্রশ্ন ও নম্বর যোগ করুন।', keywords: 'question mcq written answer প্রশ্ন', icon: FileQuestion },
+      { id: 'exam_evaluation', label: 'উত্তর যাচাই', shortLabel: 'উত্তর যাচাই', description: 'লিখিত উত্তরে নম্বর ও মন্তব্য দিন', guide: 'অপেক্ষমাণ উত্তর খুলুন, নম্বর ও মন্তব্য লিখে “মূল্যায়ন সেভ করুন” চাপুন।', keywords: 'evaluate marks feedback result উত্তর নম্বর', icon: CheckSquare },
+      { id: 'certificates', label: 'সার্টিফিকেট', shortLabel: 'Certificates', description: 'যোগ্য শিক্ষার্থীকে certificate দিন', guide: 'Evaluated exam বা completed course বেছে নিয়ে তথ্য যাচাই করে certificate দিন।', keywords: 'certificate award issue revoke সার্টিফিকেট', icon: Award },
+    ],
+  },
+  {
+    label: 'মানুষ ও সাপোর্ট',
+    items: [
+      { id: 'enrollments', label: 'পেমেন্ট ও ভর্তি', shortLabel: 'Payments', description: 'bKash যাচাই ও course access', guide: 'Transaction ID মিলিয়ে শুধু সঠিক payment-এ Verify চাপুন।', keywords: 'payment order enrollment bkash ভর্তি টাকা', icon: CreditCard },
+      { id: 'students', label: 'শিক্ষার্থী ও Admin', shortLabel: 'ব্যবহারকারী', description: 'নাম ও ব্যবহারের অনুমতি পরিবর্তন', guide: 'ব্যবহারকারী খুঁজে “এডিট” চাপুন; প্রয়োজন হলে শিক্ষার্থী বা Admin বেছে সেভ করুন।', keywords: 'student user admin role account শিক্ষার্থী', icon: Users },
+      { id: 'contact_messages', label: 'মেসেজ', shortLabel: 'Messages', description: 'Contact form-এর প্রশ্ন ও উত্তর', guide: 'Unread message খুলুন, যোগাযোগ সম্পন্ন হলে Replied হিসেবে চিহ্নিত করুন।', keywords: 'message contact support reply মেসেজ', icon: Mail },
+    ],
+  },
+  {
+    label: 'ওয়েবসাইট',
+    items: [
+      { id: 'settings', label: 'ওয়েবসাইট এডিটর', shortLabel: 'ওয়েবসাইট এডিটর', description: 'নাম, হোমপেজ, যোগাযোগ, bKash ও নীতিমালা', guide: 'অংশ বেছে লেখা পরিবর্তন করুন; সবশেষে “সব পরিবর্তন সেভ করুন” চাপুন।', keywords: 'settings homepage logo contact bkash seo about policy edit website', icon: Settings },
+    ],
+  },
+];
+
+const ALL_NAV_ITEMS = NAV_GROUPS.flatMap(group => group.items);
+const VALID_TABS = new Set(ALL_NAV_ITEMS.map(item => item.id));
+
+const emptyAnalytics: AdminAnalyticsSummary = {
+  totalUsers: 0,
+  totalEnrollments: 0,
+  activeEnrollments: 0,
+  pendingOrders: 0,
+  paidOrders: 0,
+  totalRevenue: 0,
+  totalCourses: 0,
+  totalBooks: 0,
+  totalExams: 0,
+  totalExamAttempts: 0,
+  averageExamScore: 0,
+  pendingWrittenEvaluations: 0,
+  certificatesIssued: 0,
+};
 
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState('overview');
-  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedTab = searchParams.get('tab');
+  const activeTab = VALID_TABS.has(requestedTab as AdminTabId) ? requestedTab as AdminTabId : 'overview';
   const { isDemo } = useAuth();
-  const [analytics, setAnalytics] = useState<AdminAnalyticsSummary>({
-    totalUsers: 0, totalEnrollments: 0, activeEnrollments: 0,
-    pendingOrders: 0, paidOrders: 0, totalRevenue: 0,
-    totalCourses: 0, totalBooks: 0, totalExams: 0,
-    totalExamAttempts: 0, averageExamScore: 0,
-    pendingWrittenEvaluations: 0, certificatesIssued: 0,
-  });
+  const site = useSiteSettings();
+  const [analytics, setAnalytics] = useState<AdminAnalyticsSummary>(emptyAnalytics);
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
   const [adminExams, setAdminExams] = useState<Exam[]>(exams);
+  const [pendingPayments, setPendingPayments] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  const [taskSearch, setTaskSearch] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  const activeItem = ALL_NAV_ITEMS.find(item => item.id === activeTab) || ALL_NAV_ITEMS[0];
+  const searchResults = useMemo(() => {
+    const term = taskSearch.trim().toLowerCase();
+    if (!term) return ALL_NAV_ITEMS.slice(1, 7);
+    return ALL_NAV_ITEMS.filter(item => `${item.label} ${item.shortLabel} ${item.description} ${item.keywords}`.toLowerCase().includes(term));
+  }, [taskSearch]);
+
+  const navigateTo = (tab: AdminTabId) => {
+    if (tab === 'overview') setSearchParams({});
+    else setSearchParams({ tab });
+    setTaskSearch('');
+    setSearchOpen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const handleLogout = async () => {
     if (isDemo) {
       clearDemoSession();
-      navigate('/login');
+      window.location.href = '/login';
       return;
     }
     await auth.signOut();
-    navigate('/');
+    window.location.href = '/';
   };
 
-  // Fetch real analytics
   useEffect(() => {
     if (DEMO_MODE && isDemo) {
       setAnalytics({
+        ...emptyAnalytics,
         totalUsers: adminStats.totalStudents,
-        totalEnrollments: 0,
-        activeEnrollments: 0,
-        pendingOrders: 0,
-        paidOrders: 0,
         totalRevenue: 1250000,
         totalCourses: defaultCourses.length,
-        totalBooks: 0,
         totalExams: exams.length,
-        totalExamAttempts: 0,
-        averageExamScore: 0,
-        pendingWrittenEvaluations: 0,
-        certificatesIssued: 0,
       });
+      setPendingPayments(3);
+      setUnreadMessages(5);
       setAnalyticsLoading(false);
       return;
     }
 
+    let active = true;
     const fetchAnalytics = async () => {
       setAnalyticsLoading(true);
       try {
         const [
-          usersSnap, enrollSnap, ordersSnap, subsSnap,
-          coursesSnap, booksSnap, examsSnap,
-          attSnap, wrSnap, certSnap, contactSnap
+          usersSnapshot,
+          enrollmentsSnapshot,
+          ordersSnapshot,
+          paymentsSnapshot,
+          coursesSnapshot,
+          booksSnapshot,
+          examsSnapshot,
+          attemptsSnapshot,
+          writtenSnapshot,
+          certificatesSnapshot,
+          contactSnapshot,
         ] = await Promise.all([
           getDocs(collection(db, 'users')),
           getDocs(collection(db, 'enrollments')),
@@ -88,418 +234,339 @@ export default function AdminDashboard() {
           getDocs(collection(db, 'certificates')),
           getDocs(collection(db, 'contactMessages')),
         ]);
+        if (!active) return;
 
-        const allOrders = ordersSnap.docs.map(d => d.data() as Order);
-        const allAttempts = attSnap.docs.map(d => d.data() as ExamAttempt);
-        const allEnrollments = enrollSnap.docs.map(d => d.data() as Enrollment);
-        const paidOrders = allOrders.filter(o => o.status === 'paid');
-        const verifiedSubs = subsSnap.docs.filter(d => d.data().status === 'verified');
-
-        // Calculate real revenue from bKash verified submissions
-        const totalRevenue = verifiedSubs.reduce((sum, d) => sum + (d.data().amount || 0), 0);
-
-        // Calculate average exam score
-        const evaluatedAttempts = allAttempts.filter(a => a.status === 'evaluated' && a.obtainedMarks !== undefined);
-        const avgScore = evaluatedAttempts.length > 0
-          ? Math.round(evaluatedAttempts.reduce((sum, a) => sum + (a.obtainedMarks || 0), 0) / evaluatedAttempts.length)
+        const orders = ordersSnapshot.docs.map(item => item.data() as Order);
+        const attempts = attemptsSnapshot.docs.map(item => item.data() as ExamAttempt);
+        const enrollments = enrollmentsSnapshot.docs.map(item => item.data() as Enrollment);
+        const verifiedPayments = paymentsSnapshot.docs.filter(item => item.data().status === 'verified');
+        const evaluatedAttempts = attempts.filter(attempt => attempt.status === 'evaluated' && attempt.obtainedMarks !== undefined);
+        const averageScore = evaluatedAttempts.length
+          ? Math.round(evaluatedAttempts.reduce((total, attempt) => total + (attempt.obtainedMarks || 0), 0) / evaluatedAttempts.length)
           : 0;
 
-        const pendingWritten = wrSnap.docs.filter(d => d.data().status === 'submitted').length;
-        const issuedCerts = certSnap.docs.filter(d => d.data().status === 'issued').length;
-
+        setPendingPayments(paymentsSnapshot.docs.filter(item => item.data().status === 'submitted').length);
+        setUnreadMessages(contactSnapshot.docs.filter(item => item.data().status === 'unread').length);
         setAnalytics({
-          totalUsers: usersSnap.size,
-          totalEnrollments: enrollSnap.size,
-          activeEnrollments: allEnrollments.filter(e => e.status === 'active').length,
-          pendingOrders: allOrders.filter(o => o.status === 'pending').length,
-          paidOrders: paidOrders.length,
-          totalRevenue,
-          totalCourses: coursesSnap.size,
-          totalBooks: booksSnap.size,
-          totalExams: examsSnap.size,
-          totalExamAttempts: attSnap.size,
-          averageExamScore: avgScore,
-          pendingWrittenEvaluations: pendingWritten,
-          certificatesIssued: issuedCerts,
+          totalUsers: usersSnapshot.size,
+          totalEnrollments: enrollmentsSnapshot.size,
+          activeEnrollments: enrollments.filter(item => item.status === 'active').length,
+          pendingOrders: orders.filter(item => item.status === 'pending').length,
+          paidOrders: orders.filter(item => item.status === 'paid').length,
+          totalRevenue: verifiedPayments.reduce((total, item) => total + (Number(item.data().amount) || 0), 0),
+          totalCourses: coursesSnapshot.size,
+          totalBooks: booksSnapshot.size,
+          totalExams: examsSnapshot.size,
+          totalExamAttempts: attemptsSnapshot.size,
+          averageExamScore: averageScore,
+          pendingWrittenEvaluations: writtenSnapshot.docs.filter(item => item.data().status === 'submitted').length,
+          certificatesIssued: certificatesSnapshot.docs.filter(item => item.data().status === 'issued').length,
         });
-      } catch (e) { console.error(e); }
-      finally { setAnalyticsLoading(false); }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        if (active) setAnalyticsLoading(false);
+      }
     };
     fetchAnalytics();
+    return () => { active = false; };
   }, [isDemo]);
 
   useEffect(() => {
     if (DEMO_MODE && isDemo) return;
-    const unsubscribe = onSnapshot(collection(db, 'exams'), (snapshot) => {
-      if (!snapshot.empty) setAdminExams(snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Exam[]);
-    });
-    return unsubscribe;
+    return onSnapshot(collection(db, 'exams'), snapshot => {
+      if (!snapshot.empty) {
+        setAdminExams(snapshot.docs.map(item => ({ id: item.id, ...item.data() })) as Exam[]);
+      }
+    }, error => console.error(error));
   }, [isDemo]);
 
-  const menu = [
-    { id: 'overview', label: L.overview, icon: LayoutDashboard },
-    { id: 'enrollments', label: L.enrollments, icon: ClipboardList },
-    { id: 'orders', label: L.orders, icon: CreditCard },
-    { id: 'categories', label: L.categories, icon: Filter },
-    { id: 'courses', label: L.courses, icon: BookOpen },
-    { id: 'books', label: L.books, icon: BookMarked },
-    { id: 'articles', label: L.articles, icon: FileText },
-    { id: 'exams', label: 'Exams', icon: Calendar },
-    { id: 'exam_questions', label: L.examQuestions, icon: HelpCircle },
-    { id: 'exam_evaluation', label: L.examEvaluation, icon: CheckSquare },
-    { id: 'certificates', label: L.certificates, icon: Award },
-    { id: 'contact_messages', label: L.messages, icon: Mail },
-    { id: 'students', label: L.students, icon: Users },
-    { id: 'settings', label: L.settings, icon: Settings },
+  const bkashReady = /^01[3-9]\d{8}$/.test(site.bkashNumber.replace(/[\s-]/g, ''));
+  const phoneReady = !/X|000000/.test(site.phone);
+  const setupChecks = [
+    { label: 'কোর্স যোগ করা আছে', done: analytics.totalCourses > 0, action: 'courses' as AdminTabId },
+    { label: 'bKash নম্বর দেওয়া আছে', done: bkashReady, action: 'settings' as AdminTabId },
+    { label: 'সঠিক ফোন নম্বর দেওয়া আছে', done: phoneReady, action: 'settings' as AdminTabId },
+    { label: 'পরীক্ষা তৈরি করা আছে', done: analytics.totalExams > 0, action: 'exams' as AdminTabId },
   ];
+  const completedChecks = setupChecks.filter(check => check.done).length;
+
+  const renderActiveContent = () => {
+    switch (activeTab) {
+      case 'courses': return <AdminCourses />;
+      case 'books': return <AdminBooks />;
+      case 'articles': return <AdminArticles />;
+      case 'categories': return <AdminCategories />;
+      case 'exams': return <AdminExams />;
+      case 'exam_questions': return <AdminExamQuestions exams={adminExams} />;
+      case 'exam_evaluation': return <AdminExamEvaluation exams={adminExams} />;
+      case 'certificates': return <AdminCertificates exams={adminExams} />;
+      case 'enrollments': return <AdminEnrollments />;
+      case 'students': return <AdminStudents />;
+      case 'contact_messages': return <AdminContactMessages />;
+      case 'settings': return <AdminSiteSettings />;
+      default: return null;
+    }
+  };
 
   return (
-    <div className="min-h-screen relative z-10">
-      <div className="flex min-h-screen overflow-hidden ml-0 md:ml-64 transition-all">
-        
-        {/* Sidebar - Desktop Fixed */}
-        <div className="hidden md:flex flex-col w-64 bg-[#0F172A]/80 backdrop-blur-xl text-white fixed top-0 left-0 h-screen p-6 border-r border-white/10 shadow-2xl z-20">
-          <div className="flex items-center gap-2 mb-12 mt-4 px-2">
-            <div className="w-10 h-10 bg-[#2563EB] rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
-              <BookOpen className="h-6 w-6 text-white" />
+    <div className="min-h-screen bg-[#070B14] text-white">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-72 flex-col border-r border-white/10 bg-[#0B1220]/95 px-4 py-5 backdrop-blur-xl md:flex">
+        <Link to="/" target="_blank" className="mb-6 flex items-center gap-3 rounded-2xl px-3 py-2 hover:bg-white/5">
+          <span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-[#2563EB] to-[#10B981] shadow-lg">
+            {site.logoUrl ? <img src={site.logoUrl} alt="" className="h-full w-full object-cover" /> : <BookOpen className="h-6 w-6 text-white" />}
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate text-lg font-extrabold">{site.shortName || site.name}</span>
+            <span className="block text-[11px] font-bold uppercase tracking-widest text-emerald-300">Admin Control Center</span>
+          </span>
+        </Link>
+
+        <nav className="min-h-0 flex-1 overflow-y-auto pr-1" aria-label="Admin navigation">
+          {NAV_GROUPS.map(group => (
+            <div key={group.label} className="mb-5">
+              <div className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-600">{group.label}</div>
+              <div className="space-y-1">
+                {group.items.map(item => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => navigateTo(item.id)}
+                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
+                      activeTab === item.id
+                        ? 'bg-[#2563EB] text-white shadow-lg shadow-blue-950/30'
+                        : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                    }`}
+                  >
+                    <item.icon className="h-[18px] w-[18px] shrink-0" />
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-bold">{item.label}</span>
+                      {activeTab === item.id && <span className="block truncate text-[10px] text-blue-100">{item.shortLabel}</span>}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
-            <span className="font-display font-bold text-xl uppercase tracking-tight">
-              Mathemzi<span className="text-[#F59E0B]">Edu</span>
-            </span>
-          </div>
+          ))}
+        </nav>
 
-          <div className="text-[10px] font-bold uppercase tracking-widest text-[#10B981] mb-4 px-2 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse"></span>
-            Admin Panel
-          </div>
-          <nav className="space-y-2 flex-grow">
-            {menu.map(item => (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                  activeTab === item.id 
-                    ? 'bg-[#2563EB]/20 text-white shadow-lg border border-[#2563EB]/40' 
-                    : 'text-slate-400 hover:bg-white/5 hover:text-white border border-transparent'
-                }`}
-              >
-                <item.icon className="h-5 w-5" />
-                {item.label}
-              </button>
-            ))}
-          </nav>
-
-          <div className="mt-auto border-t border-white/10 pt-6">
-            <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-400 hover:bg-red-500/10 hover:border-red-500/20 border border-transparent transition-all">
-              <LogOut className="h-5 w-5" /> {isDemo ? 'Exit Demo' : 'Logout'}
-            </button>
-          </div>
+        <div className="mt-3 border-t border-white/10 pt-3">
+          <Link to="/" target="_blank" className="mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-300 hover:bg-white/5 hover:text-white">
+            <ExternalLink className="h-4 w-4" /> ওয়েবসাইট দেখুন
+          </Link>
+          <button type="button" onClick={handleLogout} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold text-rose-300 hover:bg-rose-500/10">
+            <LogOut className="h-4 w-4" /> {isDemo ? 'Demo থেকে বের হন' : 'Logout'}
+          </button>
         </div>
+      </aside>
 
-        {/* Main Content */}
-        <div className="flex-grow p-6 md:p-10 w-full relative z-10">
+      <main id="main-content" className="min-h-screen md:ml-72">
+        <div className="mx-auto max-w-[1500px] px-4 py-5 sm:px-6 sm:py-7 lg:px-10">
           {DEMO_MODE && isDemo && (
-            <div className="mb-6 rounded-xl bg-purple-500/10 border border-purple-500/30 px-5 py-3 text-sm text-purple-300 flex items-center gap-2">
-              <Eye className="h-4 w-4 shrink-0" />
-              <span><strong>Demo Mode Active</strong> — changes may be saved to localStorage only. Firestore writes may be blocked.</span>
+            <div className="mb-5 flex items-start gap-2 rounded-xl border border-purple-400/20 bg-purple-400/10 px-4 py-3 text-sm text-purple-200">
+              <Sparkles className="mt-0.5 h-4 w-4 shrink-0" />
+              Demo mode চলছে—এখানে করা পরিবর্তন শুধু এই browser-এ দেখা যেতে পারে।
             </div>
           )}
-          <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-10 gap-6">
-            <div>
-              <h1 className="text-3xl font-display font-bold text-white mb-2">
-                {menu.find(m => m.id === activeTab)?.label}
-              </h1>
-              <p className="text-slate-400">Welcome to the Mathemzi Edu admin panel.</p>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="hidden lg:flex items-center relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <input 
-                  type="text" 
-                  placeholder="Global search..." 
-                  className="pl-10 pr-4 py-2.5 rounded-full bg-white/5 border border-white/10 focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent text-sm text-white placeholder:text-slate-500 backdrop-blur-md w-64 transition-all"
-                />
-              </div>
-              <div className="h-10 w-10 rounded-full bg-white/10 border border-white/20 text-white flex items-center justify-center font-bold shadow-lg shrink-0">
-                A
-              </div>
-            </div>
-          </div>
 
-          <div className="md:hidden -mx-2 mb-8 overflow-x-auto pb-2">
-            <div className="flex min-w-max gap-2 px-2">
-              {menu.map(item => (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id)}
-                  className={`flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold ${
-                    activeTab === item.id
-                      ? 'border-[#2563EB]/40 bg-[#2563EB]/20 text-white'
-                      : 'border-white/10 bg-white/5 text-slate-300'
-                  }`}
-                >
-                  <item.icon className="h-4 w-4" />
-                  {item.label.replace('Manage ', '')}
-                </button>
-              ))}
-              <button onClick={handleLogout} className="flex items-center gap-2 rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-2 text-sm font-bold text-red-300">
-                <LogOut className="h-4 w-4" /> {isDemo ? 'Exit Demo' : 'Logout'}
-              </button>
-            </div>
-          </div>
-
-          {activeTab === 'overview' && (
-            <>
-              {/* Quick Actions */}
-              <div className="mb-10">
-                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3">{L.quickActions}</h3>
-                <div className="flex flex-wrap gap-2">
-                  <button onClick={() => setActiveTab('courses')} className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-slate-300 text-xs font-bold hover:bg-white/10 hover:text-white transition-all">
-                    + {L.addCourse}
-                  </button>
-                  <button onClick={() => setActiveTab('books')} className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-slate-300 text-xs font-bold hover:bg-white/10 hover:text-white transition-all">
-                    + {L.addBook}
-                  </button>
-                  <button onClick={() => setActiveTab('articles')} className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-slate-300 text-xs font-bold hover:bg-white/10 hover:text-white transition-all">
-                    + {L.addArticle}
-                  </button>
-                  <button onClick={() => setActiveTab('enrollments')} className="px-4 py-2 rounded-xl bg-[#E2136E]/20 border border-[#E2136E]/30 text-[#E2136E] text-xs font-bold hover:bg-[#E2136E]/30 transition-all">
-                    {L.paymentVerification}
-                  </button>
-                  <button onClick={() => setActiveTab('contact_messages')} className="px-4 py-2 rounded-xl bg-[#2563EB]/20 border border-[#2563EB]/30 text-blue-300 text-xs font-bold hover:bg-[#2563EB]/30 transition-all">
-                    {L.messages}
-                  </button>
-                  <button onClick={() => setActiveTab('certificates')} className="px-4 py-2 rounded-xl bg-[#F59E0B]/20 border border-[#F59E0B]/30 text-[#F59E0B] text-xs font-bold hover:bg-[#F59E0B]/30 transition-all">
-                    {L.certificates}
-                  </button>
-                </div>
-              </div>
-
-              {/* Stats Grid */}
-              {analyticsLoading ? (
-                <div className="flex justify-center py-12"><div className="w-10 h-10 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin" /></div>
-              ) : (<>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-                <div className="bg-white/5 backdrop-blur-md rounded-3xl p-6 border border-white/10 shadow-xl flex items-center gap-4">
-                  <div className="h-14 w-14 rounded-2xl bg-[#2563EB]/20 text-[#2563EB] border border-[#2563EB]/30 flex items-center justify-center shrink-0">
-                    <Users className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-slate-400 mb-1 uppercase tracking-wider">Total Users</div>
-                    <div className="text-2xl font-bold text-white">{analytics.totalUsers.toLocaleString()}</div>
-                  </div>
-                </div>
-                <div className="bg-white/5 backdrop-blur-md rounded-3xl p-6 border border-white/10 shadow-xl flex items-center gap-4">
-                  <div className="h-14 w-14 rounded-2xl bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/30 flex items-center justify-center shrink-0">
-                    <DollarSign className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-slate-400 mb-1 uppercase tracking-wider">Revenue (bKash Verified)</div>
-                    <div className="text-2xl font-bold text-white">{formatCurrency(analytics.totalRevenue)}</div>
-                    <div className="text-[10px] text-slate-500">{analytics.paidOrders} paid orders</div>
-                  </div>
-                </div>
-                <div className="bg-white/5 backdrop-blur-md rounded-3xl p-6 border border-white/10 shadow-xl flex items-center gap-4">
-                  <div className="h-14 w-14 rounded-2xl bg-purple-500/20 text-purple-400 border border-purple-500/30 flex items-center justify-center shrink-0">
-                    <BookOpen className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-slate-400 mb-1 uppercase tracking-wider">Enrollments</div>
-                    <div className="text-2xl font-bold text-white">{analytics.totalEnrollments}</div>
-                    <div className="text-[10px] text-slate-500">{analytics.activeEnrollments} active</div>
-                  </div>
-                </div>
-                <div className="bg-white/5 backdrop-blur-md rounded-3xl p-6 border border-white/10 shadow-xl flex items-center gap-4">
-                  <div className="h-14 w-14 rounded-2xl bg-[#F59E0B]/20 text-[#F59E0B] border border-[#F59E0B]/30 flex items-center justify-center shrink-0">
-                    <Calendar className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-slate-400 mb-1 uppercase tracking-wider">Pending Orders</div>
-                    <div className="text-2xl font-bold text-white">{analytics.pendingOrders}</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Row 2 */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-                <div className="bg-white/5 backdrop-blur-md rounded-3xl p-6 border border-white/10 shadow-xl flex items-center gap-4">
-                  <div className="h-14 w-14 rounded-2xl bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center justify-center shrink-0">
-                    <BookOpen className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-slate-400 mb-1 uppercase tracking-wider">Courses</div>
-                    <div className="text-2xl font-bold text-white">{analytics.totalCourses}</div>
-                  </div>
-                </div>
-                <div className="bg-white/5 backdrop-blur-md rounded-3xl p-6 border border-white/10 shadow-xl flex items-center gap-4">
-                  <div className="h-14 w-14 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0">
-                    <BookOpen className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-slate-400 mb-1 uppercase tracking-wider">Books</div>
-                    <div className="text-2xl font-bold text-white">{analytics.totalBooks}</div>
-                  </div>
-                </div>
-                <div className="bg-white/5 backdrop-blur-md rounded-3xl p-6 border border-white/10 shadow-xl flex items-center gap-4">
-                  <div className="h-14 w-14 rounded-2xl bg-purple-500/20 text-purple-400 border border-purple-500/30 flex items-center justify-center shrink-0">
-                    <FileText className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-slate-400 mb-1 uppercase tracking-wider">Exams</div>
-                    <div className="text-2xl font-bold text-white">{analytics.totalExams}</div>
-                  </div>
-                </div>
-                <div className="bg-white/5 backdrop-blur-md rounded-3xl p-6 border border-white/10 shadow-xl flex items-center gap-4">
-                  <div className="h-14 w-14 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center shrink-0">
-                    <Users className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-slate-400 mb-1 uppercase tracking-wider">Exam Attempts</div>
-                    <div className="text-2xl font-bold text-white">{analytics.totalExamAttempts}</div>
-                    <div className="text-[10px] text-slate-500">Avg score: {analytics.averageExamScore}</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Row 3 */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-                <div className="bg-white/5 backdrop-blur-md rounded-3xl p-6 border border-white/10 shadow-xl flex items-center gap-4">
-                  <div className="h-14 w-14 rounded-2xl bg-red-500/20 text-red-400 border border-red-500/30 flex items-center justify-center shrink-0">
-                    <FileText className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-slate-400 mb-1 uppercase tracking-wider">Pending Evaluations</div>
-                    <div className="text-2xl font-bold text-white">{analytics.pendingWrittenEvaluations}</div>
-                  </div>
-                </div>
-                <div className="bg-white/5 backdrop-blur-md rounded-3xl p-6 border border-white/10 shadow-xl flex items-center gap-4">
-                  <div className="h-14 w-14 rounded-2xl bg-[#F59E0B]/20 text-[#F59E0B] border border-[#F59E0B]/30 flex items-center justify-center shrink-0">
-                    <Award className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-slate-400 mb-1 uppercase tracking-wider">Certificates Issued</div>
-                    <div className="text-2xl font-bold text-white">{analytics.certificatesIssued}</div>
-                  </div>
-                </div>
-              </div>
-              </> )}
-
-              {/* Data Tables */}
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                {/* Recent Courses */}
-                <div className="bg-white/5 backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden">
-                  <div className="p-6 flex justify-between items-center bg-white/5 border-b border-white/10">
-                    <h3 className="font-bold text-lg text-white">Recent Courses</h3>
-                    <button type="button" onClick={() => setActiveTab('courses')} className="text-sm text-[#2563EB] font-bold hover:underline">View All</button>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="bg-black/20 text-[10px] uppercase tracking-widest text-slate-400 border-b border-white/10">
-                          <th className="p-4 font-bold">Course Name</th>
-                          <th className="p-4 font-bold hidden sm:table-cell">Instructor</th>
-                          <th className="p-4 font-bold">Price</th>
-                          <th className="p-4 font-bold">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {defaultCourses.slice(0, 4).map(course => (
-                          <tr key={course.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                            <td className="p-4">
-                              <div className="font-medium text-white line-clamp-1">{course.title}</div>
-                              <div className="text-xs text-slate-400 hidden sm:block">{course.category}</div>
-                            </td>
-                            <td className="p-4 text-sm text-slate-300 hidden sm:table-cell">{course.instructor}</td>
-                            <td className="p-4 text-sm font-bold text-[#10B981]">{formatCurrency(course.price)}</td>
-                            <td className="p-4">
-                              <span className="px-2.5 py-1 rounded border border-[#10B981]/30 text-[10px] font-bold bg-[#10B981]/10 text-[#10B981] uppercase tracking-wider">Active</span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* Upcoming Exams */}
-                <div className="bg-white/5 backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden">
-                  <div className="p-6 flex justify-between items-center bg-white/5 border-b border-white/10">
-                    <h3 className="font-bold text-lg text-white">Upcoming Exams</h3>
-                    <button type="button" onClick={() => setActiveTab('exams')} className="text-sm text-[#2563EB] font-bold hover:underline">View All</button>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="bg-black/20 text-[10px] uppercase tracking-widest text-slate-400 border-b border-white/10">
-                          <th className="p-4 font-bold">Exam Details</th>
-                          <th className="p-4 font-bold">Date</th>
-                          <th className="p-4 font-bold">Fee</th>
-                          <th className="p-4 font-bold">Type</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {exams.slice(0, 4).map(exam => (
-                          <tr key={exam.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                            <td className="p-4">
-                              <div className="font-medium text-white line-clamp-1">{exam.title}</div>
-                            </td>
-                            <td className="p-4 text-sm text-slate-300 whitespace-nowrap">{exam.date}</td>
-                            <td className="p-4 text-sm font-bold text-[#10B981]">{formatCurrency(exam.fee)}</td>
-                            <td className="p-4">
-                              <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider border ${
-                                exam.type === 'MCQ' ? 'bg-[#2563EB]/10 text-blue-300 border-[#2563EB]/30' : 'bg-purple-500/10 text-purple-300 border-purple-500/30'
-                              }`}>{exam.type}</span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-
-          {activeTab === 'enrollments' && <AdminEnrollments />}
-          {activeTab === 'orders' && <AdminEnrollments />}
-          {activeTab === 'categories' && <AdminCategories />}
-          {activeTab === 'courses' && <AdminCourses />}
-          {activeTab === 'books' && <AdminBooks />}
-          {activeTab === 'articles' && <AdminArticles />}
-          {activeTab === 'exams' && <AdminExams />}
-          {activeTab === 'exam_questions' && <AdminExamQuestions exams={adminExams} />}
-          {activeTab === 'exam_evaluation' && <AdminExamEvaluation exams={adminExams} />}
-          {activeTab === 'certificates' && <AdminCertificates exams={adminExams} />}
-          {activeTab === 'contact_messages' && <AdminContactMessages />}
-          {activeTab === 'students' && (
-            <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="h-14 w-14 rounded-2xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
-                  <Users className="h-6 w-6 text-blue-400" />
-                </div>
+          <div className="mb-5 md:hidden">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#2563EB]"><BookOpen className="h-5 w-5" /></span>
                 <div>
-                  <h3 className="text-xl font-bold text-white">Students Management</h3>
-                  <p className="text-sm text-slate-400">User accounts are automatically created when students register. To manage a user's role (student/admin), update the user document in Firestore: set <code className="text-[#F59E0B] bg-black/30 px-1.5 py-0.5 rounded text-xs">role: 'admin'</code></p>
+                  <div className="font-extrabold">{site.shortName || 'Mathemzi'}</div>
+                  <div className="text-[10px] uppercase tracking-widest text-emerald-300">Admin</div>
                 </div>
               </div>
-              <div className="bg-black/30 rounded-2xl p-5 border border-white/10">
-                <h4 className="font-bold text-white mb-3">How to make a user Admin</h4>
-                <ol className="list-decimal list-inside space-y-2 text-sm text-slate-300">
-                  <li>Go to Firebase Console → Firestore Database</li>
-                  <li>Find the user document in <code className="text-[#F59E0B] bg-black/30 px-1 py-0.5 rounded text-xs">users/{'{userId}'}</code> collection</li>
-                  <li>Set <code className="text-[#10B981] bg-black/30 px-1 py-0.5 rounded text-xs">role: 'admin'</code> field</li>
-                  <li>User must sign out and sign in again for changes to take effect</li>
-                </ol>
+              <Link to="/" target="_blank" className="rounded-xl border border-white/10 bg-white/5 p-2.5 text-slate-200" aria-label="View website">
+                <ExternalLink className="h-4 w-4" />
+              </Link>
+            </div>
+            <label>
+              <span className="sr-only">Admin section</span>
+              <select value={activeTab} onChange={event => navigateTo(event.target.value as AdminTabId)}
+                className="w-full rounded-xl border border-white/10 bg-[#0F172A] px-4 py-3 text-sm font-bold text-white outline-none">
+                {NAV_GROUPS.map(group => (
+                  <optgroup key={group.label} label={group.label}>
+                    {group.items.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
+                  </optgroup>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <header className="mb-7 flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+            <div>
+              <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-blue-300">
+                <activeItem.icon className="h-4 w-4" /> {activeItem.shortLabel}
               </div>
-              <div className="mt-4 text-xs text-slate-500">
-                <p>Current firebase-applet-config.json determines the Firebase project connection.</p>
-                <p>All user data is stored in the Firestore <code className="text-[#F59E0B] bg-black/30 px-1 py-0.5 rounded text-xs">users</code> collection.</p>
+              <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">{activeItem.label}</h1>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-400">{activeItem.description}</p>
+            </div>
+
+            <div className="relative w-full xl:w-[390px]">
+              <label>
+                <span className="sr-only">Admin কাজ খুঁজুন</span>
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                <input
+                  value={taskSearch}
+                  onFocus={() => setSearchOpen(true)}
+                  onChange={event => { setTaskSearch(event.target.value); setSearchOpen(true); }}
+                  placeholder="আমি কী করতে চাই? যেমন: bKash, course…"
+                  className="w-full rounded-2xl border border-white/10 bg-white/5 py-3 pl-11 pr-10 text-sm text-white outline-none backdrop-blur-xl focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20"
+                />
+                {taskSearch && (
+                  <button type="button" onClick={() => setTaskSearch('')} aria-label="Clear search" className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1 text-slate-500 hover:text-white">
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </label>
+              {searchOpen && (
+                <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-full overflow-hidden rounded-2xl border border-white/10 bg-[#111827] p-2 shadow-2xl">
+                  <div className="mb-1 flex items-center justify-between px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    <span>{taskSearch ? 'খোঁজার ফল' : 'জনপ্রিয় কাজ'}</span>
+                    <button type="button" onClick={() => setSearchOpen(false)} className="rounded p-1 hover:bg-white/5"><X className="h-3.5 w-3.5" /></button>
+                  </div>
+                  {searchResults.length ? searchResults.slice(0, 7).map(item => (
+                    <button key={item.id} type="button" onClick={() => navigateTo(item.id)}
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-white/5">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/5 text-blue-300"><item.icon className="h-4 w-4" /></span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-bold text-white">{item.label}</span>
+                        <span className="block truncate text-xs text-slate-400">{item.description}</span>
+                      </span>
+                      <ChevronRight className="h-4 w-4 text-slate-600" />
+                    </button>
+                  )) : (
+                    <div className="px-4 py-8 text-center text-sm text-slate-400">এই নামে কোনো কাজ পাওয়া যায়নি।</div>
+                  )}
+                </div>
+              )}
+            </div>
+          </header>
+
+          {activeTab === 'overview' ? (
+            <div className="space-y-7">
+              <section className="overflow-hidden rounded-3xl border border-blue-400/15 bg-gradient-to-br from-[#172554] via-[#111D3A] to-[#0F172A] p-6 sm:p-8">
+                <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                  <div>
+                    <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-emerald-300"><Gauge className="h-4 w-4" /> সহজ শুরু</div>
+                    <h2 className="text-2xl font-extrabold sm:text-3xl">আজ কী করতে চান?</h2>
+                    <p className="mt-2 text-sm text-slate-300">কাজটি বেছে নিন—পরের পাতায় ধাপে ধাপে নির্দেশনা থাকবে।</p>
+                  </div>
+                  <button type="button" onClick={() => navigateTo('settings')}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-extrabold text-[#0F172A] hover:bg-blue-50">
+                    <Sparkles className="h-4 w-4 text-[#2563EB]" /> ওয়েবসাইটের লেখা বদলান
+                  </button>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {[
+                    { id: 'courses' as AdminTabId, title: 'নতুন কোর্স যোগ করব', text: 'মূল্য, শিক্ষক ও cover দিন', icon: BookOpen, color: 'text-blue-300 bg-blue-400/10' },
+                    { id: 'enrollments' as AdminTabId, title: 'Payment যাচাই করব', text: `${pendingPayments}টি submission অপেক্ষায়`, icon: WalletCards, color: 'text-pink-300 bg-pink-400/10' },
+                    { id: 'exams' as AdminTabId, title: 'পরীক্ষা তৈরি করব', text: 'তারিখ, fee ও সময় ঠিক করুন', icon: Calendar, color: 'text-purple-300 bg-purple-400/10' },
+                    { id: 'exam_evaluation' as AdminTabId, title: 'উত্তর দেখব', text: `${analytics.pendingWrittenEvaluations}টি written answer pending`, icon: ClipboardCheck, color: 'text-amber-300 bg-amber-400/10' },
+                    { id: 'contact_messages' as AdminTabId, title: 'মেসেজের উত্তর দেব', text: `${unreadMessages}টি unread message`, icon: MessageSquare, color: 'text-emerald-300 bg-emerald-400/10' },
+                    { id: 'students' as AdminTabId, title: 'শিক্ষার্থী দেখব', text: 'নাম ও access পরিবর্তন করুন', icon: UserCog, color: 'text-cyan-300 bg-cyan-400/10' },
+                  ].map(task => (
+                    <button key={task.id} type="button" onClick={() => navigateTo(task.id)}
+                      className="group flex items-center gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-left transition hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/10">
+                      <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${task.color}`}><task.icon className="h-5 w-5" /></span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-extrabold text-white">{task.title}</span>
+                        <span className="mt-0.5 block truncate text-xs text-slate-400">{task.text}</span>
+                      </span>
+                      <ChevronRight className="h-4 w-4 text-slate-600 transition group-hover:translate-x-0.5 group-hover:text-white" />
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+                <section className="rounded-3xl border border-white/10 bg-white/5 p-5 sm:p-6">
+                  <div className="mb-5 flex items-start justify-between gap-4">
+                    <div>
+                      <h2 className="text-lg font-extrabold">Website readiness</h2>
+                      <p className="mt-1 text-xs text-slate-400">Live payment নেওয়ার আগে এই তথ্যগুলো পূরণ করুন।</p>
+                    </div>
+                    <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs font-bold text-slate-300">{completedChecks}/{setupChecks.length} সম্পন্ন</span>
+                  </div>
+                  <div className="mb-5 h-2 overflow-hidden rounded-full bg-black/30">
+                    <div className="h-full rounded-full bg-gradient-to-r from-[#2563EB] to-[#10B981] transition-all" style={{ width: `${(completedChecks / setupChecks.length) * 100}%` }} />
+                  </div>
+                  <div className="space-y-2">
+                    {setupChecks.map(check => (
+                      <button key={check.label} type="button" onClick={() => navigateTo(check.action)}
+                        className="flex w-full items-center gap-3 rounded-xl border border-white/5 bg-black/15 px-4 py-3 text-left hover:bg-white/5">
+                        {check.done ? <CheckCircle className="h-5 w-5 shrink-0 text-emerald-400" /> : <AlertCircle className="h-5 w-5 shrink-0 text-amber-400" />}
+                        <span className="flex-1 text-sm font-bold text-slate-200">{check.label}</span>
+                        <span className={`text-xs font-bold ${check.done ? 'text-emerald-300' : 'text-amber-300'}`}>{check.done ? 'ঠিক আছে' : 'সম্পন্ন করুন'}</span>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+
+                <section className="rounded-3xl border border-white/10 bg-white/5 p-5 sm:p-6">
+                  <h2 className="text-lg font-extrabold">সংক্ষিপ্ত হিসাব</h2>
+                  <p className="mt-1 text-xs text-slate-400">বর্তমান সাইটের গুরুত্বপূর্ণ সংখ্যা।</p>
+                  {analyticsLoading ? (
+                    <div className="flex justify-center py-16"><Loader2 className="h-7 w-7 animate-spin text-[#2563EB]" /></div>
+                  ) : (
+                    <div className="mt-5 grid grid-cols-2 gap-3">
+                      {[
+                        { label: 'মোট শিক্ষার্থী', value: analytics.totalUsers.toLocaleString(), icon: Users },
+                        { label: 'Active ভর্তি', value: analytics.activeEnrollments.toLocaleString(), icon: ShieldCheck },
+                        { label: 'মোট আয়', value: formatCurrency(analytics.totalRevenue), icon: CreditCard },
+                        { label: 'Certificate', value: analytics.certificatesIssued.toLocaleString(), icon: Award },
+                      ].map(stat => (
+                        <div key={stat.label} className="rounded-2xl border border-white/8 bg-black/15 p-4">
+                          <stat.icon className="mb-3 h-4 w-4 text-blue-300" />
+                          <div className="text-lg font-extrabold text-white sm:text-xl">{stat.value}</div>
+                          <div className="mt-1 text-[11px] text-slate-400">{stat.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
               </div>
+
+              <section className="rounded-3xl border border-white/10 bg-white/5 p-5 sm:p-6">
+                <div className="mb-5">
+                  <h2 className="text-lg font-extrabold">সবকিছু এখান থেকে নিয়ন্ত্রণ করুন</h2>
+                  <p className="mt-1 text-xs text-slate-400">প্রতিটি অংশে যোগ করা, পরিবর্তন করা ও প্রয়োজনীয় নিয়ন্ত্রণের অপশন আছে।</p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  {[
+                    { id: 'courses' as AdminTabId, label: 'কোর্স', count: analytics.totalCourses, icon: BookOpen },
+                    { id: 'books' as AdminTabId, label: 'বই', count: analytics.totalBooks, icon: BookMarked },
+                    { id: 'exams' as AdminTabId, label: 'পরীক্ষা', count: analytics.totalExams, icon: Calendar },
+                    { id: 'students' as AdminTabId, label: 'অ্যাকাউন্ট', count: analytics.totalUsers, icon: Users },
+                  ].map(item => (
+                    <button key={item.id} type="button" onClick={() => navigateTo(item.id)}
+                      className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/15 p-4 text-left hover:bg-white/5">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-blue-300"><item.icon className="h-5 w-5" /></span>
+                      <span className="flex-1">
+                        <span className="block text-xl font-extrabold">{item.count.toLocaleString()}</span>
+                        <span className="block text-xs text-slate-400">{item.label}</span>
+                      </span>
+                      <ChevronRight className="h-4 w-4 text-slate-600" />
+                    </button>
+                  ))}
+                </div>
+              </section>
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {activeTab !== 'settings' && (
+                <div className="flex items-start gap-3 rounded-2xl border border-blue-400/15 bg-blue-400/5 px-4 py-3 text-sm leading-relaxed text-blue-100">
+                  <HelpCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span><strong>সহজ নিয়ম:</strong> {activeItem.guide}</span>
+                </div>
+              )}
+              {renderActiveContent()}
             </div>
           )}
-          {activeTab === 'settings' && <AdminSiteSettings />}
         </div>
-      </div>
+      </main>
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { db } from '../lib/firebase';
 import { MAIN_CATEGORIES_DATA } from '../lib/data';
 import { DEMO_MODE, SIMPLE_EMAIL_LOGIN, clearDemoSession } from '../lib/demo';
 import type { MainCategory, SubCategory } from '../lib/types';
+import { useSiteSettings } from '../lib/useSiteConfig';
 
 const CATEGORY_COLORS: Record<string, string> = {
   'Academic Maths': 'text-[#F59E0B]',
@@ -27,6 +28,7 @@ export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
   const { user, isDemo } = useAuth();
+  const site = useSiteSettings();
   const [categories, setCategories] = useState<MainCategory[]>([]);
   const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
 
@@ -51,6 +53,17 @@ export default function Navbar() {
   useEffect(() => {
     setIsOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!site.faviconUrl) return;
+    let favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+    if (!favicon) {
+      favicon = document.createElement('link');
+      favicon.rel = 'icon';
+      document.head.appendChild(favicon);
+    }
+    favicon.href = site.faviconUrl;
+  }, [site.faviconUrl]);
 
   const displayCategories = categories.length > 0 ? categories : MAIN_CATEGORIES_DATA;
   
@@ -90,13 +103,11 @@ export default function Navbar() {
       <nav className={`${DEMO_MODE && isDemo ? '' : 'sticky top-0'} z-50 w-full backdrop-blur-md bg-[#0F172A]/80 border-b border-white/10`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-20">
-          <Link to="/" className="flex items-center gap-3 rounded-lg" aria-label="Mathemzi Edu home">
-            <span className="w-10 h-10 bg-[#2563EB] rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
-              <BookOpen className="h-6 w-6 text-white" />
+          <Link to="/" className="flex items-center gap-3 rounded-lg" aria-label={`${site.name} home`}>
+            <span className="w-10 h-10 bg-[#2563EB] rounded-lg flex items-center justify-center overflow-hidden shadow-lg shadow-blue-500/20">
+              {site.logoUrl ? <img src={site.logoUrl} alt="" className="h-full w-full object-cover" /> : <BookOpen className="h-6 w-6 text-white" />}
             </span>
-            <span className="font-display font-bold text-xl tracking-tight uppercase text-white hover:text-blue-400 transition-colors">
-              Mathemzi <span className="text-[#10B981]">Edu</span>
-            </span>
+            <span className="font-display font-bold text-xl tracking-tight uppercase text-white hover:text-blue-400 transition-colors">{site.name}</span>
           </Link>
 
           {/* Desktop Menu */}

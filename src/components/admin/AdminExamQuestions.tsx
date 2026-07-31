@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { Plus, Edit2, Trash2, Save, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { AlertCircle, CheckCircle, Plus, Edit2, Trash2, Save, X } from 'lucide-react';
 import type { ExamQuestion, Exam } from '../../lib/types';
 
 interface AdminExamQuestionsProps {
@@ -15,6 +15,7 @@ export default function AdminExamQuestions({ exams }: AdminExamQuestionsProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [addingNew, setAddingNew] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const [form, setForm] = useState<Partial<ExamQuestion>>({
     questionType: 'mcq',
@@ -34,7 +35,10 @@ export default function AdminExamQuestions({ exams }: AdminExamQuestionsProps) {
       const snap = await getDocs(q);
       const all = snap.docs.map(d => ({ id: d.id, ...d.data() })) as ExamQuestion[];
       setQuestions(all.filter(q => q.examId === examId));
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      setMessage({ type: 'error', text: 'প্রশ্নগুলো লোড করা যায়নি। আবার চেষ্টা করুন।' });
+    }
     finally { setLoading(false); }
   };
 
@@ -50,8 +54,20 @@ export default function AdminExamQuestions({ exams }: AdminExamQuestionsProps) {
   };
 
   const handleSave = async () => {
-    if (!form.questionText?.trim()) return;
+    if (!form.questionText?.trim()) {
+      setMessage({ type: 'error', text: 'প্রশ্নটি লিখুন।' });
+      return;
+    }
+    if (!form.marks || form.marks <= 0) {
+      setMessage({ type: 'error', text: 'নম্বর ০-এর বেশি হতে হবে।' });
+      return;
+    }
+    if (form.questionType === 'mcq' && (form.options || []).some(option => !option.trim())) {
+      setMessage({ type: 'error', text: 'MCQ প্রশ্নের চারটি উত্তরই পূরণ করুন।' });
+      return;
+    }
     setSaving(true);
+    setMessage(null);
     const now = Date.now();
     try {
       if (editingId) {
@@ -65,31 +81,45 @@ export default function AdminExamQuestions({ exams }: AdminExamQuestionsProps) {
           updatedAt: now,
         });
       } else {
-        await addDoc(collection(db, 'examQuestions'), {
+        const value = {
           examId: selectedExamId,
           questionType: form.questionType,
           questionText: form.questionText,
-          options: form.questionType === 'mcq' ? form.options : [],
-          correctOption: form.questionType === 'mcq' ? form.correctOption : -1,
           marks: form.marks,
-          explanation: form.explanation || '',
           order: questions.length,
           createdAt: now,
           updatedAt: now,
-        });
+          ...(form.questionType === 'mcq' ? {
+            options: form.options,
+            correctOption: form.correctOption,
+          } : {}),
+        };
+        const createdQuestion = await addDoc(collection(db, 'examQuestions'), value);
+        if (form.explanation?.trim()) {
+          await updateDoc(createdQuestion, { explanation: form.explanation.trim() });
+        }
       }
       resetForm();
-      fetchQuestions(selectedExamId);
-    } catch (e) { console.error(e); alert('Error saving question.'); }
+      await fetchQuestions(selectedExamId);
+      setMessage({ type: 'success', text: 'প্রশ্নটি সফলভাবে সেভ হয়েছে।' });
+    } catch (e) {
+      console.error(e);
+      setMessage({ type: 'error', text: 'প্রশ্নটি সেভ করা যায়নি। তথ্যগুলো দেখে আবার চেষ্টা করুন।' });
+    }
     finally { setSaving(false); }
   };
 
   const handleDelete = async (qId: string) => {
-    if (!confirm('Delete this question?')) return;
+    if (!confirm('প্রশ্নটি মুছে ফেলবেন?')) return;
+    setMessage(null);
     try {
       await deleteDoc(doc(db, 'examQuestions', qId));
-      fetchQuestions(selectedExamId);
-    } catch (e) { console.error(e); }
+      await fetchQuestions(selectedExamId);
+      setMessage({ type: 'success', text: 'প্রশ্নটি মুছে ফেলা হয়েছে।' });
+    } catch (e) {
+      console.error(e);
+      setMessage({ type: 'error', text: 'প্রশ্নটি মুছতে সমস্যা হয়েছে।' });
+    }
   };
 
   const startEdit = (q: ExamQuestion) => {
@@ -115,15 +145,22 @@ export default function AdminExamQuestions({ exams }: AdminExamQuestionsProps) {
     <div>
       {/* Exam Selector */}
       <div className="mb-6">
-        <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 block">Select Exam</label>
+        <label className="text-sm font-bold text-white mb-2 block">কোন পরীক্ষার প্রশ্ন এডিট করবেন?</label>
         <select value={selectedExamId} onChange={e => setSelectedExamId(e.target.value)}
           className="w-full max-w-md rounded-xl border border-white/10 bg-black/30 px-4 py-2.5 text-sm text-white outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]">
-          <option value="">-- Choose an exam --</option>
+          <option value="">একটি পরীক্ষা বেছে নিন</option>
           {exams.map(exam => (
             <option key={exam.id} value={exam.id}>{exam.title} ({exam.type})</option>
           ))}
         </select>
       </div>
+
+      {message && (
+        <div className={`mb-5 flex items-start gap-2 rounded-xl border p-3 text-sm ${message.type === 'success' ? 'border-emerald-400/20 bg-emerald-500/10 text-emerald-200' : 'border-rose-400/20 bg-rose-500/10 text-rose-200'}`}>
+          {message.type === 'success' ? <CheckCircle className="mt-0.5 h-4 w-4 shrink-0" /> : <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />}
+          {message.text}
+        </div>
+      )}
 
       {selectedExamId && (
         <>
@@ -131,7 +168,7 @@ export default function AdminExamQuestions({ exams }: AdminExamQuestionsProps) {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <div className="bg-white/5 p-4 rounded-xl border border-white/10 text-center">
               <div className="text-2xl font-bold text-white">{questions.length}</div>
-              <div className="text-[10px] font-bold text-slate-400 uppercase">Total Questions</div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase">মোট প্রশ্ন</div>
             </div>
             <div className="bg-white/5 p-4 rounded-xl border border-white/10 text-center">
               <div className="text-2xl font-bold text-blue-300">{mcqCount}</div>
@@ -139,19 +176,19 @@ export default function AdminExamQuestions({ exams }: AdminExamQuestionsProps) {
             </div>
             <div className="bg-white/5 p-4 rounded-xl border border-white/10 text-center">
               <div className="text-2xl font-bold text-purple-300">{writtenCount}</div>
-              <div className="text-[10px] font-bold text-slate-400 uppercase">Written</div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase">লিখিত</div>
             </div>
             <div className="bg-white/5 p-4 rounded-xl border border-white/10 text-center">
               <div className="text-2xl font-bold text-[#10B981]">{totalMarks}</div>
-              <div className="text-[10px] font-bold text-slate-400 uppercase">Total Marks</div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase">মোট নম্বর</div>
             </div>
           </div>
 
           {/* Add New Button */}
           {!addingNew && !editingId && (
-            <button onClick={() => { resetForm(); setAddingNew(true); }}
+            <button type="button" onClick={() => { resetForm(); setAddingNew(true); setMessage(null); }}
               className="flex items-center gap-2 bg-[#2563EB] text-white text-sm font-bold px-4 py-2.5 rounded-xl hover:bg-blue-500 transition-all mb-6 shadow-lg">
-              <Plus className="h-4 w-4" /> Add Question
+              <Plus className="h-4 w-4" /> নতুন প্রশ্ন
             </button>
           )}
 
@@ -159,25 +196,25 @@ export default function AdminExamQuestions({ exams }: AdminExamQuestionsProps) {
           {(addingNew || editingId) && (
             <div className="bg-white/5 rounded-2xl border border-white/10 p-6 mb-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-white">{editingId ? 'Edit Question' : 'Add New Question'}</h3>
-                <button onClick={resetForm} className="text-slate-400 hover:text-white p-1"><X className="h-5 w-5" /></button>
+                <h3 className="font-bold text-white">{editingId ? 'প্রশ্ন এডিট করুন' : 'নতুন প্রশ্ন যোগ করুন'}</h3>
+                <button type="button" onClick={resetForm} className="text-slate-400 hover:text-white p-1"><X className="h-5 w-5" /></button>
               </div>
 
               <div className="space-y-4">
                 {/* Question Type */}
                 <div>
-                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Question Type / প্রশ্নের ধরন</label>
+                  <label className="text-sm font-bold text-white block mb-2">প্রশ্নের ধরন</label>
                   <div className="flex gap-3">
-                    <button onClick={() => setForm({ ...form, questionType: 'mcq' })}
+                    <button type="button" onClick={() => setForm({ ...form, questionType: 'mcq' })}
                       className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${form.questionType === 'mcq' ? 'bg-[#2563EB] text-white' : 'bg-white/5 text-slate-300 border border-white/10'}`}>MCQ</button>
-                    <button onClick={() => setForm({ ...form, questionType: 'written' })}
-                      className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${form.questionType === 'written' ? 'bg-purple-500 text-white' : 'bg-white/5 text-slate-300 border border-white/10'}`}>Written</button>
+                    <button type="button" onClick={() => setForm({ ...form, questionType: 'written' })}
+                      className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${form.questionType === 'written' ? 'bg-purple-500 text-white' : 'bg-white/5 text-slate-300 border border-white/10'}`}>লিখিত</button>
                   </div>
                 </div>
 
                 {/* Question Text */}
                 <div>
-                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Question Text</label>
+                  <label className="text-sm font-bold text-white block mb-1">প্রশ্ন *</label>
                   <textarea value={form.questionText} onChange={e => setForm({ ...form, questionText: e.target.value })}
                     rows={3}
                     className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-2.5 text-sm text-white outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] placeholder:text-slate-600" />
@@ -186,7 +223,7 @@ export default function AdminExamQuestions({ exams }: AdminExamQuestionsProps) {
                 {/* MCQ Options */}
                 {form.questionType === 'mcq' && (
                   <div>
-                    <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Options</label>
+                    <label className="text-sm font-bold text-white block mb-2">উত্তরের অপশন—সঠিক উত্তরটি চিহ্নিত করুন</label>
                     {form.options?.map((opt, i) => (
                       <div key={i} className="flex items-center gap-2 mb-2">
                         <span className="text-xs font-bold text-slate-400 w-6">{['A', 'B', 'C', 'D'][i]}</span>
@@ -196,9 +233,9 @@ export default function AdminExamQuestions({ exams }: AdminExamQuestionsProps) {
                           setForm({ ...form, options: opts });
                         }}
                           className="flex-grow rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-[#2563EB] placeholder:text-slate-600" />
-                        <button onClick={() => setForm({ ...form, correctOption: i })}
+                        <button type="button" onClick={() => setForm({ ...form, correctOption: i })}
                           className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${form.correctOption === i ? 'bg-[#10B981] text-white' : 'bg-white/5 text-slate-400 border border-white/10'}`}>
-                          {form.correctOption === i ? 'Correct ✓' : 'Mark Correct'}
+                          {form.correctOption === i ? 'সঠিক ✓' : 'সঠিক উত্তর'}
                         </button>
                       </div>
                     ))}
@@ -208,7 +245,7 @@ export default function AdminExamQuestions({ exams }: AdminExamQuestionsProps) {
                 {/* Marks */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Marks</label>
+                    <label className="text-sm font-bold text-white block mb-1">এই প্রশ্নের নম্বর</label>
                     <input type="number" min={0.5} step={0.5} value={form.marks} onChange={e => setForm({ ...form, marks: parseFloat(e.target.value) || 1 })}
                       className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-2.5 text-sm text-white outline-none focus:border-[#2563EB]" />
                   </div>
@@ -217,7 +254,7 @@ export default function AdminExamQuestions({ exams }: AdminExamQuestionsProps) {
                 {/* Explanation (MCQ) */}
                 {form.questionType === 'mcq' && (
                   <div>
-                    <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Explanation (shown after exam)</label>
+                    <label className="text-sm font-bold text-white block mb-1">উত্তরের ব্যাখ্যা (পরীক্ষার পরে দেখাবে)</label>
                     <textarea value={form.explanation} onChange={e => setForm({ ...form, explanation: e.target.value })}
                       rows={2}
                       className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-2.5 text-sm text-white outline-none focus:border-[#2563EB] placeholder:text-slate-600" />
@@ -225,11 +262,11 @@ export default function AdminExamQuestions({ exams }: AdminExamQuestionsProps) {
                 )}
 
                 <div className="flex gap-2 pt-2">
-                  <button onClick={handleSave} disabled={saving}
+                  <button type="button" onClick={handleSave} disabled={saving}
                     className="flex items-center gap-2 bg-[#10B981] text-white text-sm font-bold px-5 py-2.5 rounded-xl hover:bg-emerald-500 transition-all disabled:opacity-50 shadow-lg">
-                    <Save className="h-4 w-4" /> {saving ? 'Saving...' : 'Save Question'}
+                    <Save className="h-4 w-4" /> {saving ? 'সেভ হচ্ছে…' : 'প্রশ্ন সেভ করুন'}
                   </button>
-                  <button onClick={resetForm} className="text-slate-400 text-sm font-bold px-4 py-2.5 rounded-xl border border-white/10 hover:bg-white/5">Cancel</button>
+                  <button type="button" onClick={resetForm} className="text-slate-400 text-sm font-bold px-4 py-2.5 rounded-xl border border-white/10 hover:bg-white/5">বাতিল</button>
                 </div>
               </div>
             </div>
@@ -240,7 +277,7 @@ export default function AdminExamQuestions({ exams }: AdminExamQuestionsProps) {
             <div className="flex justify-center py-8"><div className="w-8 h-8 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin" /></div>
           ) : questions.length === 0 ? (
             <div className="bg-white/5 border border-white/10 rounded-2xl p-12 text-center">
-              <p className="text-slate-500">No questions yet. Click "Add Question" to start.</p>
+              <p className="text-slate-500">এখনও কোনো প্রশ্ন নেই। “নতুন প্রশ্ন” চাপুন।</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -252,8 +289,8 @@ export default function AdminExamQuestions({ exams }: AdminExamQuestionsProps) {
                         <span className="text-[10px] font-bold text-slate-500">Q{idx + 1}.</span>
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                           q.questionType === 'mcq' ? 'bg-[#2563EB]/10 text-blue-300' : 'bg-purple-500/10 text-purple-300'
-                        }`}>{q.questionType === 'mcq' ? 'MCQ' : 'Written'}</span>
-                        <span className="text-[10px] text-slate-500">{q.marks} mark{q.marks > 1 ? 's' : ''}</span>
+                        }`}>{q.questionType === 'mcq' ? 'MCQ' : 'লিখিত'}</span>
+                        <span className="text-[10px] text-slate-500">{q.marks} নম্বর</span>
                       </div>
                       <p className="text-sm text-white font-medium">{q.questionText}</p>
                       {q.questionType === 'mcq' && q.options && (
@@ -268,12 +305,12 @@ export default function AdminExamQuestions({ exams }: AdminExamQuestionsProps) {
                         </div>
                       )}
                       {q.explanation && (
-                        <p className="mt-1 text-[11px] text-slate-500 italic">Explanation: {q.explanation}</p>
+                        <p className="mt-1 text-[11px] text-slate-500 italic">ব্যাখ্যা: {q.explanation}</p>
                       )}
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
-                      <button onClick={() => startEdit(q)} className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/5"><Edit2 className="h-4 w-4" /></button>
-                      <button onClick={() => q.id && handleDelete(q.id)} className="p-1.5 text-red-400 hover:text-red-300 rounded-lg hover:bg-red-500/10"><Trash2 className="h-4 w-4" /></button>
+                      <button type="button" aria-label="প্রশ্ন এডিট করুন" onClick={() => startEdit(q)} className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/5"><Edit2 className="h-4 w-4" /></button>
+                      <button type="button" aria-label="প্রশ্ন মুছুন" onClick={() => q.id && handleDelete(q.id)} className="p-1.5 text-red-400 hover:text-red-300 rounded-lg hover:bg-red-500/10"><Trash2 className="h-4 w-4" /></button>
                     </div>
                   </div>
                 </div>
@@ -285,7 +322,7 @@ export default function AdminExamQuestions({ exams }: AdminExamQuestionsProps) {
 
       {!selectedExamId && (
         <div className="bg-white/5 border border-white/10 rounded-2xl p-12 text-center">
-          <p className="text-slate-500">Select an exam to manage its questions.</p>
+          <p className="text-slate-500">প্রশ্ন দেখার বা যোগ করার জন্য উপরের তালিকা থেকে একটি পরীক্ষা বেছে নিন।</p>
         </div>
       )}
     </div>

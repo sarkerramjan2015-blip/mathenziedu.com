@@ -76,17 +76,17 @@ export function UploadField({ label, value, onChange, accept = 'image/*', folder
       {/* Mode toggle */}
       {showUrlInput && (
         <div className="flex items-center gap-2 mb-2">
-          <button onClick={() => setUseUrl(true)}
+          <button type="button" onClick={() => setUseUrl(true)}
             className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${useUrl ? 'bg-[#2563EB] text-white' : 'bg-white/5 text-slate-400 border border-white/10'}`}>
-            <LinkIcon className="h-3 w-3" /> URL
+            <LinkIcon className="h-3 w-3" /> ছবির লিংক
           </button>
-          <button onClick={() => setUseUrl(false)}
+          <button type="button" onClick={() => setUseUrl(false)}
             className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${!useUrl ? 'bg-[#2563EB] text-white' : 'bg-white/5 text-slate-400 border border-white/10'}`}>
-            <Upload className="h-3 w-3" /> Upload
+            <Upload className="h-3 w-3" /> ছবি আপলোড
           </button>
           {!storage && (
             <span className="text-[9px] text-[#F59E0B] flex items-center gap-1">
-              <AlertCircle className="h-3 w-3" /> Storage not configured — use URL
+              <AlertCircle className="h-3 w-3" /> আপলোড চালু নেই—ছবির লিংক দিন
             </span>
           )}
         </div>
@@ -95,7 +95,7 @@ export function UploadField({ label, value, onChange, accept = 'image/*', folder
       {/* URL input */}
       {(useUrl || !storage) && (
         <input value={value} onChange={e => onChange(e.target.value)}
-          placeholder="https://..."
+          placeholder="https://... ছবির লিংক এখানে দিন"
           className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-2.5 text-sm text-white outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] placeholder:text-slate-600" />
       )}
 
@@ -107,7 +107,7 @@ export function UploadField({ label, value, onChange, accept = 'image/*', folder
           {uploading && (
             <div className="mt-2">
               <div className="flex items-center gap-2 text-xs text-slate-400">
-                <Loader2 className="h-3 w-3 animate-spin" /> Uploading... {progress}%
+                <Loader2 className="h-3 w-3 animate-spin" /> আপলোড হচ্ছে… {progress}%
               </div>
               <div className="w-full bg-black/40 rounded-full h-1.5 mt-1 border border-white/5 overflow-hidden">
                 <div className="bg-[#2563EB] h-full rounded-full transition-all" style={{ width: `${progress}%` }} />

@@ -1,21 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from './firebase';
-import { SITE_CONFIG, BKASH_MANUAL, SOCIAL_LINKS, CONTACT_INFO } from './config';
 import { DEMO_MODE } from './demo';
+import { DEFAULT_SITE_SETTINGS } from './siteSettings';
 import type { SiteSettings } from './types';
 
-// Merged site settings with config.ts as fallback
 export interface SiteConfig {
   name: string;
   shortName: string;
   tagline: string;
   banglaTagline: string;
+  logoUrl: string;
+  faviconUrl: string;
   email: string;
   phone: string;
   address: string;
   supportHours: string;
-  // Homepage
+  heroBadge: string;
   heroTitle: string;
   heroSubtitle: string;
   heroBtn1Text: string;
@@ -26,54 +27,92 @@ export interface SiteConfig {
   heroBtn3Link: string;
   trustSectionTitle: string;
   trustSectionItems: string[];
-  // Payment
+  aboutTitle: string;
+  aboutIntro: string;
+  missionTitle: string;
+  missionText: string;
+  visionTitle: string;
+  visionText: string;
+  aboutFeatures: string[];
+  contactPageTitle: string;
+  contactPageSubtitle: string;
   bkashNumber: string;
   bkashAccountType: string;
   bkashInstructions: string[];
+  paymentSupportContact: string;
   paymentNote: string;
-  // Social
   facebookUrl: string;
   youtubeUrl: string;
   instagramUrl: string;
-  // SEO
+  linkedinUrl: string;
+  twitterUrl: string;
   seoTitle: string;
   seoDescription: string;
+  seoKeywords: string;
   seoOgImage: string;
-  // Footer
+  privacyIntro: string;
+  privacyDataText: string;
+  privacySecurityText: string;
+  termsIntro: string;
+  termsAccessText: string;
+  termsPaymentsText: string;
   footerText: string;
 }
 
-function configFallback(): SiteConfig {
+function toSiteConfig(data?: Partial<SiteSettings>): SiteConfig {
+  const value = { ...DEFAULT_SITE_SETTINGS, ...data };
   return {
-    name: SITE_CONFIG.name,
-    shortName: SITE_CONFIG.shortName,
-    tagline: SITE_CONFIG.tagline,
-    banglaTagline: SITE_CONFIG.banglaTagline || '',
-    email: SITE_CONFIG.email,
-    phone: SITE_CONFIG.phone,
-    address: SITE_CONFIG.address,
-    supportHours: (SITE_CONFIG as any).supportHours || '',
-    heroTitle: 'Master Mathematics for School, Olympiad & Admission Success',
-    heroSubtitle: 'Mathemzi Edu helps Bangladeshi students build strong mathematical foundations through structured courses, practice exams, books, progress tracking, and expert-guided learning.',
-    heroBtn1Text: 'Explore Courses',
-    heroBtn1Link: '/courses',
-    heroBtn2Text: 'Start Practice Exam',
-    heroBtn2Link: '/exams',
-    heroBtn3Text: 'Browse Books',
-    heroBtn3Link: '/books',
-    trustSectionTitle: 'Why Learn With Mathemzi Edu',
-    trustSectionItems: ['Structured learning paths for all levels', 'Practice-based exam preparation', 'Manual bKash verified enrollment', 'Progress tracking & completion certificates', 'Admin-managed content & quality control'],
-    bkashNumber: BKASH_MANUAL.number,
-    bkashAccountType: BKASH_MANUAL.accountType,
-    bkashInstructions: BKASH_MANUAL.instructions,
-    paymentNote: BKASH_MANUAL.note,
-    facebookUrl: SOCIAL_LINKS.facebook,
-    youtubeUrl: SOCIAL_LINKS.youtube,
-    instagramUrl: SOCIAL_LINKS.instagram,
-    seoTitle: 'Mathemzi Edu | Premium Mathematics Learning Platform in Bangladesh',
-    seoDescription: 'Master Mathematics for School, Olympiad & Admission Success.',
-    seoOgImage: `${SITE_CONFIG.url}/og.png`,
-    footerText: 'Master Mathematics with Logic, Practice & Confidence.',
+    name: value.siteName,
+    shortName: value.shortName,
+    tagline: value.tagline,
+    banglaTagline: value.banglaTagline,
+    logoUrl: value.logoUrl,
+    faviconUrl: value.faviconUrl,
+    email: value.contactEmail,
+    phone: value.contactPhone,
+    address: value.contactAddress,
+    supportHours: value.supportHours,
+    heroBadge: value.heroBadge,
+    heroTitle: value.heroTitle,
+    heroSubtitle: value.heroSubtitle,
+    heroBtn1Text: value.heroBtn1Text,
+    heroBtn1Link: value.heroBtn1Link,
+    heroBtn2Text: value.heroBtn2Text,
+    heroBtn2Link: value.heroBtn2Link,
+    heroBtn3Text: value.heroBtn3Text,
+    heroBtn3Link: value.heroBtn3Link,
+    trustSectionTitle: value.trustSectionTitle,
+    trustSectionItems: value.trustSectionItems,
+    aboutTitle: value.aboutTitle,
+    aboutIntro: value.aboutIntro,
+    missionTitle: value.missionTitle,
+    missionText: value.missionText,
+    visionTitle: value.visionTitle,
+    visionText: value.visionText,
+    aboutFeatures: value.aboutFeatures,
+    contactPageTitle: value.contactPageTitle,
+    contactPageSubtitle: value.contactPageSubtitle,
+    bkashNumber: value.bkashNumber,
+    bkashAccountType: value.bkashAccountType,
+    bkashInstructions: value.bkashInstructions,
+    paymentSupportContact: value.paymentSupportContact,
+    paymentNote: value.paymentNote,
+    facebookUrl: value.facebookUrl,
+    youtubeUrl: value.youtubeUrl,
+    instagramUrl: value.instagramUrl,
+    linkedinUrl: value.linkedinUrl,
+    twitterUrl: value.twitterUrl,
+    seoTitle: value.seoTitle,
+    seoDescription: value.seoDescription,
+    seoKeywords: value.seoKeywords,
+    seoOgImage: value.seoOgImage,
+    privacyIntro: value.privacyIntro,
+    privacyDataText: value.privacyDataText,
+    privacySecurityText: value.privacySecurityText,
+    termsIntro: value.termsIntro,
+    termsAccessText: value.termsAccessText,
+    termsPaymentsText: value.termsPaymentsText,
+    footerText: value.footerText,
   };
 }
 
@@ -81,95 +120,55 @@ let cachedSettings: SiteConfig | null = null;
 let cacheTime = 0;
 const CACHE_DURATION = 30000;
 
+export function invalidateSiteSettingsCache() {
+  cachedSettings = null;
+  cacheTime = 0;
+}
+
 export function useSiteSettings(): SiteConfig {
-  const [settings, setSettings] = useState<SiteConfig>(cachedSettings || configFallback());
+  const [settings, setSettings] = useState<SiteConfig>(cachedSettings || toSiteConfig());
 
   useEffect(() => {
-    // Return cached if fresh
     if (cachedSettings && Date.now() - cacheTime < CACHE_DURATION) {
       setSettings(cachedSettings);
       return;
     }
 
     let cancelled = false;
-    const fetch = async () => {
+    const apply = (data?: Partial<SiteSettings>) => {
+      if (cancelled) return;
+      const merged = toSiteConfig(data);
+      cachedSettings = merged;
+      cacheTime = Date.now();
+      setSettings(merged);
+    };
+
+    const fetchSettings = async () => {
       try {
-        const snap = await getDoc(doc(db, 'siteSettings', 'main'));
-        if (snap.exists() && !cancelled) {
-          const data = snap.data() as SiteSettings;
-          const merged: SiteConfig = {
-            name: data.siteName || configFallback().name,
-            shortName: data.shortName || configFallback().shortName,
-            tagline: data.tagline || configFallback().tagline,
-            banglaTagline: data.banglaTagline || configFallback().banglaTagline,
-            email: data.contactEmail || configFallback().email,
-            phone: data.contactPhone || configFallback().phone,
-            address: data.contactAddress || configFallback().address,
-            supportHours: data.supportHours || configFallback().supportHours,
-            heroTitle: data.heroTitle || configFallback().heroTitle,
-            heroSubtitle: data.heroSubtitle || configFallback().heroSubtitle,
-            heroBtn1Text: data.heroBtn1Text || configFallback().heroBtn1Text,
-            heroBtn1Link: data.heroBtn1Link || configFallback().heroBtn1Link,
-            heroBtn2Text: data.heroBtn2Text || configFallback().heroBtn2Text,
-            heroBtn2Link: data.heroBtn2Link || configFallback().heroBtn2Link,
-            heroBtn3Text: data.heroBtn3Text || configFallback().heroBtn3Text,
-            heroBtn3Link: data.heroBtn3Link || configFallback().heroBtn3Link,
-            trustSectionTitle: data.trustSectionTitle || configFallback().trustSectionTitle,
-            trustSectionItems: data.trustSectionItems || configFallback().trustSectionItems,
-            bkashNumber: data.bkashNumber || configFallback().bkashNumber,
-            bkashAccountType: data.bkashAccountType || configFallback().bkashAccountType,
-            bkashInstructions: data.bkashInstructions || configFallback().bkashInstructions,
-            paymentNote: data.paymentNote || configFallback().paymentNote,
-            facebookUrl: data.facebookUrl || configFallback().facebookUrl,
-            youtubeUrl: data.youtubeUrl || configFallback().youtubeUrl,
-            instagramUrl: data.instagramUrl || configFallback().instagramUrl,
-            seoTitle: data.seoTitle || configFallback().seoTitle,
-            seoDescription: data.seoDescription || configFallback().seoDescription,
-            seoOgImage: data.seoOgImage || configFallback().seoOgImage,
-            footerText: data.footerText || configFallback().footerText,
-          };
-          cachedSettings = merged;
-          cacheTime = Date.now();
-          setSettings(merged);
-        }
-      } catch (e) {
-        // Firestore unavailable — use config fallback already set
+        const snapshot = await getDoc(doc(db, 'siteSettings', 'main'));
+        apply(snapshot.exists() ? snapshot.data() as SiteSettings : undefined);
+      } catch {
+        apply();
       }
     };
 
-    // In demo mode, check localStorage
     if (DEMO_MODE) {
       try {
         const raw = localStorage.getItem('demo_siteSettings');
         if (raw) {
-          const items = JSON.parse(raw) as any[];
-          const main = items.find((i: any) => i.id === 'main');
-          if (main && !cancelled) {
-            const data = main as SiteSettings;
-            const merged: SiteConfig = {
-              ...configFallback(),
-              name: data.siteName || configFallback().name,
-              tagline: data.tagline || configFallback().tagline,
-              email: data.contactEmail || configFallback().email,
-              phone: data.contactPhone || configFallback().phone,
-              address: data.contactAddress || configFallback().address,
-              bkashNumber: data.bkashNumber || configFallback().bkashNumber,
-              bkashInstructions: data.bkashInstructions || configFallback().bkashInstructions,
-              facebookUrl: data.facebookUrl || configFallback().facebookUrl,
-              youtubeUrl: data.youtubeUrl || configFallback().youtubeUrl,
-              footerText: data.footerText || configFallback().footerText,
-            };
-            setSettings(merged);
-            return;
+          const items = JSON.parse(raw) as SiteSettings[];
+          const main = items.find(item => item.id === 'main');
+          if (main) {
+            apply(main);
+            return () => { cancelled = true; };
           }
         }
-      } catch {}
-      // Also try direct Firestore for demo
-      fetch();
-      return () => { cancelled = true; };
+      } catch {
+        // Ignore invalid local demo data and use Firestore/default settings.
+      }
     }
 
-    fetch();
+    fetchSettings();
     return () => { cancelled = true; };
   }, []);
 

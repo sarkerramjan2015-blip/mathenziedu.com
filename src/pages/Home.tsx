@@ -254,10 +254,11 @@ export default function Home() {
   return (
     <>
       <SEO 
-        title="Mathemzi Edu | Premium Mathematics Learning Platform in Bangladesh"
-        description="Master Mathematics for School, Olympiad & Admission Success. Mathemzi Edu helps Bangladeshi students build strong mathematical foundations through structured courses, practice exams, books, and progress tracking."
+        title={siteCfg.seoTitle}
+        description={siteCfg.seoDescription}
+        ogImage={siteCfg.seoOgImage}
         path="/"
-        keywords="mathematics learning Bangladesh, math courses, olympiad preparation, admission math, SSC math, HSC higher math, O Level math, A Level math, math books Bangladesh, math practice exams"
+        keywords={siteCfg.seoKeywords}
       />
       <div className="w-full">
       {/* Decorative Math Symbols */}
@@ -277,7 +278,7 @@ export default function Home() {
             className="inline-flex items-center gap-2 px-3 py-1 bg-[#10B981]/20 border border-[#10B981]/30 rounded-full text-[#10B981] text-xs font-bold uppercase tracking-wider mb-6"
           >
             <span className="animate-pulse w-2 h-2 bg-[#10B981] rounded-full"></span>
-            <span>Bangladesh's Premium Math Platform</span>
+            <span>{siteCfg.heroBadge}</span>
           </motion.div>
           
           <motion.h1 
@@ -605,38 +606,19 @@ export default function Home() {
               className="flex flex-col justify-center"
             >
               <div className="py-8 px-6 bg-[#1E293B]/50 rounded-3xl border border-white/10 backdrop-blur-sm h-full shadow-2xl hover:bg-[#1E293B]/70 transition-colors duration-500">
-                <h3 className="text-lg font-bold text-white mb-6 text-center">Why Learn With Mathemzi Edu</h3>
+                <h3 className="text-lg font-bold text-white mb-6 text-center">{siteCfg.trustSectionTitle}</h3>
                 <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-[#10B981]/20 flex items-center justify-center shrink-0">
-                      <BookOpen className="h-4 w-4 text-[#10B981]" />
-                    </div>
-                    <span className="text-sm text-slate-300">Structured learning paths for all levels</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-[#2563EB]/20 flex items-center justify-center shrink-0">
-                      <Calendar className="h-4 w-4 text-[#2563EB]" />
-                    </div>
-                    <span className="text-sm text-slate-300">Practice-based exam preparation</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-purple-500/20 flex items-center justify-center shrink-0">
-                      <CreditCard className="h-4 w-4 text-purple-400" />
-                    </div>
-                    <span className="text-sm text-slate-300">Manual bKash verified enrollment</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-[#F59E0B]/20 flex items-center justify-center shrink-0">
-                      <BarChart className="h-4 w-4 text-[#F59E0B]" />
-                    </div>
-                    <span className="text-sm text-slate-300">Progress tracking &amp; completion certificates</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-rose-400/20 flex items-center justify-center shrink-0">
-                      <Shield className="h-4 w-4 text-rose-400" />
-                    </div>
-                    <span className="text-sm text-slate-300">Admin-managed content &amp; quality control</span>
-                  </div>
+                  {siteCfg.trustSectionItems.map((item, index) => {
+                    const TrustIcon = [BookOpen, Calendar, CreditCard, BarChart, Shield][index % 5];
+                    return (
+                      <div key={`${item}-${index}`} className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-lg bg-[#2563EB]/20 flex items-center justify-center shrink-0">
+                          <TrustIcon className="h-4 w-4 text-blue-300" />
+                        </div>
+                        <span className="text-sm text-slate-300">{item}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </motion.div>
