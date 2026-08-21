@@ -6,7 +6,6 @@ import {
   signInWithPopup,
   type User,
 } from 'firebase/auth';
-import { FirebaseError } from 'firebase/app';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import { isAdminUser } from '../lib/admin';
@@ -19,7 +18,11 @@ import {
 import SEO from '../components/SEO';
 
 function authErrorMessage(error: unknown) {
-  if (!(error instanceof FirebaseError)) return 'Sign in failed. Please try again.';
+  const code = typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string'
+    ? error.code
+    : '';
+
+  if (!code) return 'Google sign-in failed. Please try again.';
 
   const messages: Record<string, string> = {
     'auth/invalid-credential': 'Email or password is incorrect.',
@@ -33,7 +36,7 @@ function authErrorMessage(error: unknown) {
     'auth/network-request-failed': 'Network error. Please check your internet connection and try again.',
   };
 
-  return messages[error.code] || 'Sign in failed. Please try again.';
+  return messages[code] || `Google sign-in failed (${code}). Please try again.`;
 }
 
 function safeRedirect(value: unknown) {
