@@ -4,7 +4,6 @@ import {
   AlertCircle,
   CheckCircle,
   ChevronRight,
-  CreditCard,
   ExternalLink,
   FileText,
   Globe,
@@ -24,7 +23,7 @@ import { DEFAULT_SITE_SETTINGS } from '../../lib/siteSettings';
 import { invalidateSiteSettingsCache } from '../../lib/useSiteConfig';
 import type { SiteSettings } from '../../lib/types';
 
-type SettingsSection = 'branding' | 'homepage' | 'about' | 'contact' | 'payment' | 'social' | 'seo' | 'policies';
+type SettingsSection = 'branding' | 'homepage' | 'about' | 'contact' | 'social' | 'seo' | 'policies';
 
 const sections: Array<{
   id: SettingsSection;
@@ -36,7 +35,6 @@ const sections: Array<{
   { id: 'homepage', label: 'হোমপেজ', description: 'প্রথম পাতার লেখা ও বাটন', icon: Home },
   { id: 'about', label: 'আমাদের সম্পর্কে', description: 'মিশন, ভিশন ও ফিচার', icon: Users },
   { id: 'contact', label: 'যোগাযোগ', description: 'ফোন, ইমেইল ও ঠিকানা', icon: Phone },
-  { id: 'payment', label: 'পেমেন্ট', description: 'bKash ও নির্দেশনা', icon: CreditCard },
   { id: 'social', label: 'সোশ্যাল লিংক', description: 'Facebook, YouTube ইত্যাদি', icon: Share2 },
   { id: 'seo', label: 'Google ও শেয়ার', description: 'Search এবং social preview', icon: Search },
   { id: 'policies', label: 'নীতিমালা', description: 'Privacy ও Terms', icon: FileText },
@@ -145,10 +143,6 @@ export default function AdminSiteSettings() {
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(settings.contactEmail.trim())) {
       return 'যোগাযোগের ইমেইলটি সঠিকভাবে লিখুন।';
-    }
-    const number = settings.bkashNumber.replace(/[\s-]/g, '');
-    if (number !== '01XXXXXXXXX' && !/^01[3-9]\d{8}$/.test(number)) {
-      return 'bKash নম্বরটি ১১ সংখ্যার বাংলাদেশি মোবাইল নম্বর হতে হবে।';
     }
     return null;
   };
@@ -361,27 +355,6 @@ export default function AdminSiteSettings() {
                 <TextField label="অফিস/যোগাযোগের ঠিকানা" value={settings.contactAddress} onChange={value => update('contactAddress', value)} />
                 <TextField label="Support সময়" value={settings.supportHours} onChange={value => update('supportHours', value)} />
               </div>
-            </div>
-          )}
-
-          {section === 'payment' && (
-            <div className="space-y-5">
-              <div className="rounded-xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm leading-relaxed text-amber-100">
-                আসল bKash নম্বর না দিলে payment button বন্ধ থাকবে। নম্বর দেওয়ার আগে সেটি ঠিক আছে কি না দুইবার মিলিয়ে নিন।
-              </div>
-              <div className="grid gap-5 md:grid-cols-2">
-                <TextField label="bKash নম্বর" type="tel" value={settings.bkashNumber} onChange={value => update('bkashNumber', value)} required helper="১১ সংখ্যার নম্বর, যেমন 017XXXXXXXX" />
-                <TextField label="Account type" value={settings.bkashAccountType} onChange={value => update('bkashAccountType', value)} helper="Merchant / Personal" />
-              </div>
-              <TextField label="Payment support contact" value={settings.paymentSupportContact} onChange={value => update('paymentSupportContact', value)} />
-              <TextAreaField label="Payment-এর গুরুত্বপূর্ণ নোট" value={settings.paymentNote} onChange={value => update('paymentNote', value)} rows={5} />
-              <TextAreaField
-                label="bKash payment ধাপগুলো"
-                value={settings.bkashInstructions.join('\n')}
-                onChange={value => update('bkashInstructions', value.split('\n').map(item => item.trim()).filter(Boolean))}
-                helper="প্রতিটি ধাপ নতুন লাইনে লিখুন। ক্রমিক নম্বর নিজে থেকে দেখানো হবে।"
-                rows={9}
-              />
             </div>
           )}
 

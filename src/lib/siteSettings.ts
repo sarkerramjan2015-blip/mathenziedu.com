@@ -20,7 +20,7 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   trustSectionItems: [
     'Structured learning paths for all levels',
     'Practice-based exam preparation',
-    'Manual bKash verified enrollment',
+    'Manual admin-approved enrollment',
     'Progress tracking & completion certificates',
     'Admin-managed content & quality control',
   ],

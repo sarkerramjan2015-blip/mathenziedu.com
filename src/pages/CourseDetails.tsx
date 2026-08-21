@@ -10,7 +10,7 @@ import { getCourseCover } from '../lib/courseCovers';
 import { useAuth } from '../lib/AuthContext';
 import { DEMO_MODE, addDemoLocalData, updateDemoLocalData, getDemoLocalData, isPermissionError } from '../lib/demo';
 import SEO from '../components/SEO';
-import BkashPaymentSection from '../components/BkashPaymentSection';
+import ManualApprovalRequest from '../components/ManualApprovalRequest';
 
 const fallbackOutcomes = [
   'Advanced problem solving techniques',
@@ -328,7 +328,7 @@ const [togglingLesson, setTogglingLesson] = useState<string | null>(null);
         setActionMessage({ type: 'success', text: DEMO_MODE ? 'Enrolled! (Demo mode: saved locally only.)' : 'You are now enrolled! Start learning right away.' });
       } else {
         if (createdOrder?.status === 'pending') {
-          setActionMessage({ type: 'info', text: 'Your existing order is ready below. Complete the bKash payment and submit the transaction ID.' });
+          setActionMessage({ type: 'info', text: 'Your order is ready below. Send a payment confirmation message for admin approval.' });
           return;
         }
         if (createdOrder?.status === 'paid') {
@@ -359,7 +359,7 @@ const [togglingLesson, setTogglingLesson] = useState<string | null>(null);
         }
         setActionMessage({
           type: 'info',
-          text: DEMO_MODE ? 'Order created (demo). Pay via bKash and submit TrxID.' : 'Order created! Please pay via bKash and submit your transaction ID for verification.',
+          text: DEMO_MODE ? 'Order created (demo). Send an approval request below.' : 'Order created. Complete payment, then send a message for admin approval.',
         });
       }
     } catch (err) {
@@ -402,9 +402,9 @@ const [togglingLesson, setTogglingLesson] = useState<string | null>(null);
     }
     if (!user) return 'Login to Enroll';
     if (isFree) return 'Enroll Free';
-    if (createdOrder?.status === 'pending') return 'Continue Payment';
-    if (createdOrder?.status === 'paid') return 'Payment Verified';
-    return 'Enroll Now — Pay Later';
+    if (createdOrder?.status === 'pending') return 'Continue Request';
+    if (createdOrder?.status === 'paid') return 'Access Approved';
+    return 'Request Course Access';
   };
 
   return (
@@ -583,7 +583,7 @@ const [togglingLesson, setTogglingLesson] = useState<string | null>(null);
                 )}
                 {enrollment.exists && enrollment.status === 'pending_payment' && (
                   <div className="mb-4 rounded-xl border border-[#F59E0B]/20 bg-[#F59E0B]/10 px-4 py-3 text-sm font-medium text-[#F59E0B] flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4" /> Payment pending — complete to activate
+                    <AlertCircle className="h-4 w-4" /> Approval pending — access activates after admin approval
                   </div>
                 )}
 
@@ -615,14 +615,14 @@ const [togglingLesson, setTogglingLesson] = useState<string | null>(null);
 
                 {!isFree && !enrollment.exists && !createdOrder && (
                   <div className="text-center text-xs text-slate-500 mb-6 font-medium">
-                    Pay with bKash manually. Admin verifies within 24 hours.
+                    Complete payment manually, then send a confirmation message for admin approval.
                   </div>
                 )}
 
-                {/* bKash Payment Section — shown after order is created */}
+                {/* Manual approval request — shown after order is created */}
                 {createdOrder?.status === 'pending' && user && (
                   <div className="mb-6">
-                    <BkashPaymentSection
+                    <ManualApprovalRequest
                       order={createdOrder}
                       userId={user.uid}
                       userEmail={user.email || ''}

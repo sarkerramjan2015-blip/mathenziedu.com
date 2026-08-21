@@ -119,7 +119,7 @@ const NAV_GROUPS: Array<{ label: string; items: AdminNavItem[] }> = [
   {
     label: 'মানুষ ও সাপোর্ট',
     items: [
-      { id: 'enrollments', label: 'পেমেন্ট ও ভর্তি', shortLabel: 'Payments', description: 'bKash যাচাই ও course access', guide: 'Transaction ID মিলিয়ে শুধু সঠিক payment-এ Verify চাপুন।', keywords: 'payment order enrollment bkash ভর্তি টাকা', icon: CreditCard },
+      { id: 'enrollments', label: 'অনুমোদন ও ভর্তি', shortLabel: 'Approvals', description: 'Student message দেখে course access অনুমোদন', guide: 'Student-এর message দেখে সঠিক request-এ Approve & Activate চাপুন।', keywords: 'approval request enrollment message course access ভর্তি', icon: CreditCard },
       { id: 'students', label: 'শিক্ষার্থী ও Admin', shortLabel: 'ব্যবহারকারী', description: 'নাম ও ব্যবহারের অনুমতি পরিবর্তন', guide: 'ব্যবহারকারী খুঁজে “এডিট” চাপুন; প্রয়োজন হলে শিক্ষার্থী বা Admin বেছে সেভ করুন।', keywords: 'student user admin role account শিক্ষার্থী', icon: Users },
       { id: 'contact_messages', label: 'মেসেজ', shortLabel: 'Messages', description: 'Contact form-এর প্রশ্ন ও উত্তর', guide: 'Unread message খুলুন, যোগাযোগ সম্পন্ন হলে Replied হিসেবে চিহ্নিত করুন।', keywords: 'message contact support reply মেসেজ', icon: Mail },
     ],

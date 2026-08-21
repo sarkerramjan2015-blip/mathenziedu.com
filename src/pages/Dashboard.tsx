@@ -117,7 +117,7 @@ export default function Dashboard() {
     { id: 'books', label: 'My Books', icon: BookMarked },
     { id: 'certificates', label: 'Certificates', icon: Award },
     { id: 'saved_articles', label: 'Saved Articles', icon: FileText },
-    { id: 'payments', label: 'Payments & Orders', icon: CreditCard },
+    { id: 'payments', label: 'Requests & Orders', icon: CreditCard },
   ];
 
   return (
@@ -127,7 +127,7 @@ export default function Dashboard() {
         {user && !user.emailVerified && !isDemo && (
           <div role="status" className="mb-6 rounded-xl border border-[#F59E0B]/30 bg-[#F59E0B]/10 px-5 py-4 text-sm text-amber-100 sm:flex sm:items-center sm:justify-between sm:gap-4">
             <div>
-              <strong className="block text-[#F59E0B]">Verify your email to enroll or make payments</strong>
+              <strong className="block text-[#F59E0B]">Verify your email to enroll or request course access</strong>
               <span className="text-xs text-slate-300">Open the verification link sent to {user.email}. Then reload this page.</span>
             </div>
             <button
@@ -199,7 +199,7 @@ export default function Dashboard() {
                   </div>
                   <div className="bg-white/5 backdrop-blur-md p-5 rounded-2xl border border-white/10 shadow-xl text-center">
                     <div className="text-3xl font-bold text-[#F59E0B] mb-1">{pendingEnrollments.length}</div>
-                    <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Pending Payment</div>
+                    <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Awaiting Approval</div>
                   </div>
                   <div className="bg-white/5 backdrop-blur-md p-5 rounded-2xl border border-white/10 shadow-xl text-center">
                     <div className="text-3xl font-bold text-blue-400 mb-1">{enrollments.filter(e => e.status === 'completed').length}</div>
@@ -289,7 +289,7 @@ export default function Dashboard() {
                           )})()}
                           {enrollment.status === 'pending_payment' && (
                             <div className="mt-3 rounded-xl border border-[#F59E0B]/20 bg-[#F59E0B]/10 px-4 py-2.5 text-xs font-medium text-[#F59E0B] flex items-center gap-2">
-                              <AlertCircle className="h-3.5 w-3.5" /> Payment pending — complete to access course
+                              <AlertCircle className="h-3.5 w-3.5" /> Awaiting admin approval for course access
                             </div>
                           )}
                         </div>
@@ -510,7 +510,7 @@ export default function Dashboard() {
                   </div>
                   <div className="bg-white/5 backdrop-blur-md p-5 rounded-2xl border border-white/10 shadow-xl text-center">
                     <div className="text-3xl font-bold text-[#F59E0B] mb-1">{orders.filter(o => o.itemType === 'book' && o.status === 'pending').length}</div>
-                    <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Pending Payment</div>
+                    <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Awaiting Approval</div>
                   </div>
                 </div>
 
@@ -550,7 +550,7 @@ export default function Dashboard() {
                                 {order.currency} {order.amount.toLocaleString('en-BD')} · {new Date(order.createdAt).toLocaleDateString('en-BD')}
                               </p>
                               {sub && sub.status === 'verified' && (
-                                <p className="text-xs text-[#10B981] mt-1 font-semibold">Payment verified ✓</p>
+                                <p className="text-xs text-[#10B981] mt-1 font-semibold">Access approved</p>
                               )}
                             </div>
                             <div className="shrink-0">
@@ -561,7 +561,7 @@ export default function Dashboard() {
                               )}
                               {order.status === 'pending' && (
                                 <Link to="/books" className="inline-flex items-center gap-1 bg-[#F59E0B]/20 text-[#F59E0B] text-xs font-bold px-3 py-2 rounded-xl border border-[#F59E0B]/30 hover:bg-[#F59E0B]/30 transition-all">
-                                  <CreditCard className="h-3.5 w-3.5" /> Complete Payment
+                                  <CreditCard className="h-3.5 w-3.5" /> Send Request
                                 </Link>
                               )}
                             </div>
@@ -578,8 +578,8 @@ export default function Dashboard() {
               <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10 shadow-2xl">
                 <div className="flex items-center justify-between mb-6">
                   <div>
-                    <h3 className="text-lg font-bold text-white">Payment & Order History</h3>
-                    <p className="text-sm text-slate-400">Track your orders and bKash payment submissions.</p>
+                    <h3 className="text-lg font-bold text-white">Approval Requests & Orders</h3>
+                    <p className="text-sm text-slate-400">Track your payment confirmation messages and approval status.</p>
                   </div>
                   {orders.length > 0 && (
                     <span className="text-xs font-bold text-slate-400 bg-white/5 px-3 py-1.5 rounded-full border border-white/10">{orders.length} orders</span>
@@ -618,7 +618,7 @@ export default function Dashboard() {
                             </div>
                           </div>
 
-                          {/* Payment submission status */}
+                          {/* Manual approval request status */}
                           {sub && (
                             <div className={`text-xs rounded-lg px-3 py-2 flex items-center gap-2 ${
                               sub.status === 'verified' ? 'bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20' :
@@ -627,18 +627,18 @@ export default function Dashboard() {
                             }`}>
                               {sub.status === 'verified' ? <CheckCircle className="h-3.5 w-3.5" /> : <AlertCircle className="h-3.5 w-3.5" />}
                               <span>
-                                {sub.status === 'verified' ? 'Payment verified ✓' :
-                                 sub.status === 'submitted' ? `Transaction submitted (${sub.transactionId}) — awaiting verification` :
-                                 `Rejected: ${sub.adminNote || 'Payment rejected, please resubmit.'}`}
+                                {sub.status === 'verified' ? 'Access approved' :
+                                 sub.status === 'submitted' ? 'Approval request sent — waiting for admin review' :
+                                 `Update requested: ${sub.adminNote || 'Please send a new confirmation message.'}`}
                               </span>
                             </div>
                           )}
 
-                          {/* No submission yet — for pending orders show link */}
+                          {/* No request yet — direct the student to the item page. */}
                           {order.status === 'pending' && !sub && (
                             <div className="text-xs text-slate-500 bg-black/20 rounded-lg px-3 py-2 flex items-center gap-2">
                               <Smartphone className="h-3.5 w-3.5 text-[#E2136E]" />
-                              <span>Order created. <Link to="/courses" className="text-[#2563EB] font-bold hover:underline">Complete bKash payment</Link> to activate.</span>
+                              <span>Order created. Return to the item page and send a message for admin approval.</span>
                             </div>
                           )}
                         </div>

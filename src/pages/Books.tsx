@@ -10,7 +10,7 @@ import type { Book, Order } from '../lib/types';
 import { applyImageFallback, formatCurrency, imageWithFallback } from '../lib/media';
 import { useAuth } from '../lib/AuthContext';
 import SEO from '../components/SEO';
-import BkashPaymentSection from '../components/BkashPaymentSection';
+import ManualApprovalRequest from '../components/ManualApprovalRequest';
 
 const SUBCATEGORIES = ['All', 'Academic Books', 'Olympiad Books', 'Admission Books', 'Practice Books', 'Formula Sheets', 'PDF Resources', 'Model Test Books'];
 
@@ -229,7 +229,7 @@ export default function Books() {
                                 throw e;
                               }
                             }
-                            setOrderMsg({ bookId: book.id, type: 'success', text: DEMO_MODE ? 'Order created! (Demo mode: saved locally only.)' : 'Order created! Pay via bKash and submit your transaction ID.' });
+                            setOrderMsg({ bookId: book.id, type: 'success', text: DEMO_MODE ? 'Order created! (Demo mode: saved locally only.)' : 'Order created. Complete payment, then send a message for admin approval.' });
                           } catch {
                             setOrderMsg({ bookId: book.id, type: 'error', text: 'Something went wrong. Try again.' });
                           } finally { setOrdering(null); }
@@ -252,10 +252,10 @@ export default function Books() {
                       {orderMsg.text}
                     </div>
                   )}
-                  {/* bKash Payment Section for paid book orders */}
+                  {/* Manual approval request for paid book orders */}
                   {!book.isFree && createdOrders[book.id] && user && (
                     <div className="mt-4">
-                      <BkashPaymentSection
+                      <ManualApprovalRequest
                         order={createdOrders[book.id]}
                         userId={user.uid}
                         userEmail={user.email || ''}

@@ -8,7 +8,7 @@ import { DEMO_MODE, addDemoLocalData, isPermissionError } from '../lib/demo';
 import { Calendar, Clock, FileText, CheckCircle, ChevronRight, AlertCircle, Loader2, HelpCircle, Edit3, Play } from 'lucide-react';
 import { formatCurrency } from '../lib/media';
 import SEO from '../components/SEO';
-import BkashPaymentSection from '../components/BkashPaymentSection';
+import ManualApprovalRequest from '../components/ManualApprovalRequest';
 import type { ExamQuestion, ExamAttempt, Order } from '../lib/types';
 import type { Exam } from '../lib/types';
 import { getExamStatus } from '../lib/examStatus';
@@ -288,19 +288,18 @@ export default function ExamDetails() {
               </div>
             </div>
 
-            {/* Start Exam / Payment Section */}
+            {/* Start Exam / Manual Approval Section */}
             {showPayment && !canAccess ? (
               <div className="space-y-4">
                 {order ? (
                   <>
                     <div className="rounded-xl border border-[#F59E0B]/20 bg-[#F59E0B]/10 p-4 text-sm text-[#F59E0B] flex items-center gap-2">
-                      <AlertCircle className="h-4 w-4" /> This is a paid exam. Complete payment to access it.
+                      <AlertCircle className="h-4 w-4" /> This is a paid exam. Complete payment, then request admin approval.
                     </div>
-                    <BkashPaymentSection
+                    <ManualApprovalRequest
                       order={order}
                       userId={user?.uid || ''}
                       userEmail={user?.email || ''}
-                      onSubmitted={() => setShowPayment(false)}
                     />
                   </>
                 ) : (
@@ -308,11 +307,11 @@ export default function ExamDetails() {
                     <div>
                       <div className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Total Fee</div>
                       <div className="text-3xl font-bold text-white mb-2">{formatCurrency(exam.fee)}</div>
-                      <div className="text-sm text-slate-400">Pay to access this exam.</div>
+                      <div className="text-sm text-slate-400">Complete payment, then request admin approval to access this exam.</div>
                     </div>
                     <button onClick={handleCreateOrder} disabled={!user}
                       className="w-full sm:w-auto bg-[#10B981] hover:bg-emerald-500 text-[#0F172A] font-bold px-10 py-4 rounded-xl transition-all shadow-lg shadow-emerald-500/20 text-lg disabled:opacity-50">
-                      {user ? 'Pay & Access Exam' : 'Login to Access'}
+                      {user ? 'Request Exam Access' : 'Login to Access'}
                     </button>
                   </div>
                 )}
