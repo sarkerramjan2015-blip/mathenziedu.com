@@ -1,10 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AlertCircle, BookOpen, Loader2 } from 'lucide-react';
 import {
   GoogleAuthProvider,
-  getRedirectResult,
-  signInWithRedirect,
+  signInWithPopup,
   type User,
 } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
@@ -69,24 +68,6 @@ export default function Login() {
     }
   };
 
-  useEffect(() => {
-    let isActive = true;
-
-    const finishRedirectSignIn = async () => {
-      try {
-        const result = await getRedirectResult(auth);
-        if (result && isActive) {
-          navigate(await destinationFor(result.user), { replace: true });
-        }
-      } catch (redirectError) {
-        if (isActive) setError(authErrorMessage(redirectError));
-      }
-    };
-
-    void finishRedirectSignIn();
-    return () => { isActive = false; };
-  }, [navigate, requestedPath]);
-
   const handleGoogleSignIn = async () => {
     setError('');
     setLoadingAction('google');
@@ -94,7 +75,8 @@ export default function Login() {
     provider.setCustomParameters({ prompt: 'select_account' });
 
     try {
-      await signInWithRedirect(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      navigate(await destinationFor(result.user), { replace: true });
     } catch (signInError) {
       setError(authErrorMessage(signInError));
     } finally {
