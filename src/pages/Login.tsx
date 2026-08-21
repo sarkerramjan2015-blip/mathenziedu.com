@@ -4,7 +4,6 @@ import { AlertCircle, BookOpen, Loader2 } from 'lucide-react';
 import {
   GoogleAuthProvider,
   getRedirectResult,
-  signInWithPopup,
   signInWithRedirect,
   type User,
 } from 'firebase/auth';
@@ -20,7 +19,9 @@ import {
 import SEO from '../components/SEO';
 
 function authErrorMessage(error: unknown) {
-  const code = authErrorCode(error);
+  const code = typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string'
+    ? error.code
+    : '';
 
   if (!code) return 'Google sign-in failed. Please try again.';
 
@@ -37,12 +38,6 @@ function authErrorMessage(error: unknown) {
   };
 
   return messages[code] || `Google sign-in failed (${code}). Please try again.`;
-}
-
-function authErrorCode(error: unknown) {
-  return typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string'
-    ? error.code
-    : '';
 }
 
 function safeRedirect(value: unknown) {
@@ -99,19 +94,9 @@ export default function Login() {
     provider.setCustomParameters({ prompt: 'select_account' });
 
     try {
-      const result = await signInWithPopup(auth, provider);
-      navigate(await destinationFor(result.user), { replace: true });
+      await signInWithRedirect(auth, provider);
     } catch (signInError) {
-      if (authErrorCode(signInError) === 'auth/internal-error') {
-        try {
-          await signInWithRedirect(auth, provider);
-          return;
-        } catch (redirectError) {
-          setError(authErrorMessage(redirectError));
-        }
-      } else {
-        setError(authErrorMessage(signInError));
-      }
+      setError(authErrorMessage(signInError));
     } finally {
       setLoadingAction(null);
     }
