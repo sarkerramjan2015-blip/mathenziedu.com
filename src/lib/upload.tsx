@@ -29,13 +29,27 @@ export function UploadField({ label, value, onChange, accept = 'image/*', folder
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [useUrl, setUseUrl] = useState(true);
+  const [uploadError, setUploadError] = useState('');
 
   const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setUploadError('');
+    const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+    if (!allowedTypes.has(file.type)) {
+      setUploadError('শুধু JPG, PNG, WebP বা GIF ছবি দেওয়া যাবে।');
+      e.target.value = '';
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError('ছবিটি ৫ MB-এর চেয়ে বড়। ছোট ছবি বেছে নিন।');
+      e.target.value = '';
+      return;
+    }
+
     if (!storage) {
-      alert('Firebase Storage is not configured yet. Please paste an image URL instead.');
+      setUploadError('ছবি আপলোড এখন চালু নেই। ছবির লিংক ব্যবহার করুন।');
       setUseUrl(true);
       return;
     }
@@ -43,8 +57,15 @@ export function UploadField({ label, value, onChange, accept = 'image/*', folder
     setUploading(true);
     setProgress(0);
     try {
-      const storageRef = ref(storage, `${folder}/${Date.now()}_${file.name}`);
-      const uploadTask = uploadBytesResumable(storageRef, file);
+      const safeName = file.name
+        .replace(/[^a-zA-Z0-9._-]/g, '-')
+        .replace(/-+/g, '-')
+        .slice(-120) || 'image';
+      const storageRef = ref(storage, `${folder}/${Date.now()}_${safeName}`);
+      const uploadTask = uploadBytesResumable(storageRef, file, {
+        contentType: file.type,
+        cacheControl: 'public,max-age=31536000,immutable',
+      });
       uploadTask.on('state_changed',
         (snapshot) => {
           const pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
@@ -52,7 +73,7 @@ export function UploadField({ label, value, onChange, accept = 'image/*', folder
         },
         (error) => {
           console.error('Upload error:', error);
-          alert('Upload failed. Please try again or use a URL.');
+          setUploadError('ছবিটি আপলোড করা যায়নি। আবার চেষ্টা করুন অথবা ছবির লিংক দিন।');
           setUploading(false);
         },
         async () => {
@@ -64,7 +85,7 @@ export function UploadField({ label, value, onChange, accept = 'image/*', folder
       );
     } catch (e) {
       console.error(e);
-      alert('Upload failed. Please paste an image URL instead.');
+      setUploadError('ছবিটি আপলোড করা যায়নি। ছবির লিংক ব্যবহার করতে পারেন।');
       setUploading(false);
     }
   };
@@ -72,6 +93,7 @@ export function UploadField({ label, value, onChange, accept = 'image/*', folder
   return (
     <div className="mb-4">
       <label className="block text-xs font-bold text-slate-400 mb-1.5">{label}</label>
+      <p className="mb-2 text-[11px] text-slate-500">JPG, PNG, WebP বা GIF • সর্বোচ্চ ৫ MB</p>
 
       {/* Mode toggle */}
       {showUrlInput && (
@@ -102,7 +124,7 @@ export function UploadField({ label, value, onChange, accept = 'image/*', folder
       {/* File upload */}
       {!useUrl && storage && (
         <div>
-          <input type="file" accept={accept} onChange={handleFileUpload}
+          <input type="file" accept={accept === 'image/*' ? 'image/jpeg,image/png,image/webp,image/gif' : accept} onChange={handleFileUpload}
             className="w-full text-sm text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-[#2563EB] file:text-white hover:file:bg-blue-500 file:cursor-pointer" />
           {uploading && (
             <div className="mt-2">
@@ -119,6 +141,13 @@ export function UploadField({ label, value, onChange, accept = 'image/*', folder
               <img src={value} alt="Preview" className="h-20 w-auto rounded-lg border border-white/10 object-cover" />
             </div>
           )}
+        </div>
+      )}
+
+      {uploadError && (
+        <div role="alert" className="mt-2 flex items-start gap-1.5 text-xs text-rose-300">
+          <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <span>{uploadError}</span>
         </div>
       )}
 

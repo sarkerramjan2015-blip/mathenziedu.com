@@ -386,7 +386,7 @@ export default function TakeExam() {
     const hasWritten = questions.some(q => q.questionType === 'written');
     return (
       <>
-        <SEO title={`Results: ${exam.title} - Mathemzi Edu`} description={`Exam results for ${exam.title}`} path={`/exams/${id}/take`} />
+        <SEO title={`Results: ${exam.title} - Mathenzi Edu`} description={`Exam results for ${exam.title}`} path={`/exams/${id}/take`} />
         <div className="min-h-screen py-12 relative z-10 w-full">
           <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="bg-white/5 backdrop-blur-xl rounded-[32px] border border-white/10 overflow-hidden shadow-2xl">
@@ -510,7 +510,7 @@ export default function TakeExam() {
 
   return (
     <>
-      <SEO title={`Taking: ${exam.title} - Mathemzi Edu`} description={`Taking exam: ${exam.title}`} path={`/exams/${id}/take`} />
+      <SEO title={`Taking: ${exam.title} - Mathenzi Edu`} description={`Taking exam: ${exam.title}`} path={`/exams/${id}/take`} />
       <div className="min-h-screen relative z-10 w-full">
         {/* Top Timer Bar */}
         <div className={`sticky top-0 z-50 backdrop-blur-xl border-b transition-all ${

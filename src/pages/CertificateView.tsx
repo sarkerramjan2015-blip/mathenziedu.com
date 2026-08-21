@@ -65,7 +65,7 @@ export default function CertificateView() {
 
   return (
     <>
-      <SEO title={`Certificate: ${cert.itemTitle} - Mathemzi Edu`} description={`Certificate of completion for ${cert.itemTitle}`} path={`/certificates/${id}`} />
+      <SEO title={`Certificate: ${cert.itemTitle} - Mathenzi Edu`} description={`Certificate of completion for ${cert.itemTitle}`} path={`/certificates/${id}`} />
       <div className="min-h-screen py-8 relative z-10 w-full">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           

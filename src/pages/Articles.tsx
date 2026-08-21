@@ -37,7 +37,7 @@ export default function Articles() {
     <>
       <SEO 
         title="Articles"
-        description="Explore Mathemzi Edu's articles on mathematics philosophy, visual learning, nature patterns, and real-life mathematical applications."
+        description="Explore Mathenzi Edu's articles on mathematics philosophy, visual learning, nature patterns, and real-life mathematical applications."
         path="/articles"
       />
       <div className="pt-24 pb-16 min-h-screen">
@@ -50,7 +50,7 @@ export default function Articles() {
           className="text-center mb-16"
         >
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-sm font-semibold mb-6 border border-blue-500/20">
-            <BookOpen className="h-4 w-4" /> Mathemzi Blog
+            <BookOpen className="h-4 w-4" /> Mathenzi Blog
           </div>
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-extrabold mb-6 tracking-tight">
             Insights & <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">Articles</span>

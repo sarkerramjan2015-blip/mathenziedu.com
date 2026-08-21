@@ -31,7 +31,7 @@ export interface DemoUser {
 const ADMIN_EMAILS = new Set([
   'demo.admin@gmail.com',
   'admin@gmail.com',
-  'mathemziedu.admin@gmail.com',
+  'mathenziedu.admin@gmail.com',
 ]);
 
 export function isAdminEmail(email: string): boolean {

@@ -11,7 +11,7 @@ const fallbackSvg = `
     <path d="M468 303H732"/>
     <path d="M524 392H676"/>
   </g>
-  <text x="600" y="352" text-anchor="middle" fill="#F8FAFC" font-family="Inter, Arial, sans-serif" font-size="78" font-weight="800">Mathemzi Edu</text>
+  <text x="600" y="352" text-anchor="middle" fill="#F8FAFC" font-family="Inter, Arial, sans-serif" font-size="78" font-weight="800">Mathenzi Edu</text>
   <text x="600" y="422" text-anchor="middle" fill="#A7F3D0" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="700">Mathematics Learning Platform</text>
 </svg>`;
 

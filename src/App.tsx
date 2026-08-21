@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Navigate, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -17,7 +17,6 @@ const ExamDetails = React.lazy(() => import('./pages/ExamDetails'));
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
 const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'));
 const Login = React.lazy(() => import('./pages/Login'));
-const Register = React.lazy(() => import('./pages/Register'));
 const Contact = React.lazy(() => import('./pages/Contact'));
 const Legal = React.lazy(() => import('./pages/Legal'));
 const NotFound = React.lazy(() => import('./pages/NotFound'));
@@ -28,7 +27,6 @@ const Books = React.lazy(() => import('./pages/Books'));
 const MathematicsNature = React.lazy(() => import('./pages/MathematicsNature'));
 const TakeExam = React.lazy(() => import('./pages/TakeExam'));
 const CertificateView = React.lazy(() => import('./pages/CertificateView'));
-const ForgotPassword = React.lazy(() => import('./pages/ForgotPassword'));
 
 const PageLoader = () => (
   <div className="min-h-[70vh] flex items-center justify-center" role="status" aria-label="Loading page">
@@ -81,8 +79,8 @@ export default function App() {
                   <Route path="/certificates/:id" element={<ProtectedRoute><CertificateView /></ProtectedRoute>} />
                   <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                   <Route path="/login" element={<Login />} />
-                  <Route path="/register" element={<Register />} />
-                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/register" element={<Navigate to="/login" replace />} />
+                  <Route path="/forgot-password" element={<Navigate to="/login" replace />} />
                   <Route path="/articles" element={<Articles />} />
                   <Route path="/articles/:id" element={<ArticleDetails />} />
                   <Route path="/privacy" element={<Legal type="privacy" />} />

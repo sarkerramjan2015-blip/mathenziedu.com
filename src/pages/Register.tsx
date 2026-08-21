@@ -141,7 +141,7 @@ export default function Register() {
                 <BookOpen className="h-6 w-6 text-white" />
               </div>
               <span className="font-display font-bold text-2xl text-white tracking-tight uppercase">
-                Mathemzi<span className="text-[#10B981]">Edu</span>
+                Mathenzi<span className="text-[#10B981]">Edu</span>
               </span>
             </Link>
           </div>

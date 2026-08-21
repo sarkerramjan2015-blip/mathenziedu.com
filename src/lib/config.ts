@@ -1,24 +1,24 @@
-// ===== Mathemzi Edu — Site-wide Configuration =====
+// ===== Mathenzi Edu — Site-wide Configuration =====
 // Edit this file to update social links, contact info, and branding.
 
 export const SITE_CONFIG = {
-  name: 'Mathemzi Edu',
-  shortName: 'Mathemzi',
+  name: 'Mathenzi Edu',
+  shortName: 'Mathenzi',
   tagline: 'Master Mathematics with Logic, Practice & Confidence',
   banglaTagline: 'গণিত হোক সহজ, যুক্তিতে হোক শক্তিশালী',
   description: 'A premium Bangladesh-focused mathematics learning ecosystem for school students, O Level/A Level learners, olympiad aspirants, and admission candidates. Structured courses, practice exams, books, progress tracking, and expert-guided learning.',
-  url: (import.meta.env.VITE_SITE_URL || 'https://mathemziedu.vercel.app').replace(/\/$/, ''),
-  email: 'support@mathemziedu.com',
+  url: (import.meta.env.VITE_SITE_URL || 'https://mathenziedu.com').replace(/\/$/, ''),
+  email: 'support@mathenziedu.com',
   phone: '+880 1700 000000',
   address: 'Dhaka, Bangladesh',
   supportHours: 'Saturday – Thursday, 10:00 AM – 8:00 PM (BST)',
 };
 
 export const SOCIAL_LINKS = {
-  facebook: 'https://facebook.com/mathemziedu',
-  twitter: 'https://twitter.com/mathemziedu',
-  instagram: 'https://instagram.com/mathemziedu',
-  youtube: 'https://youtube.com/@mathemziedu',
+  facebook: 'https://facebook.com/mathenziedu',
+  twitter: 'https://twitter.com/mathenziedu',
+  instagram: 'https://instagram.com/mathenziedu',
+  youtube: 'https://youtube.com/@mathenziedu',
 };
 
 export const CONTACT_INFO = {
@@ -87,6 +87,6 @@ export const BKASH_MANUAL = {
     'Copy the Transaction ID (TrxID) from the bKash confirmation message.',
     'Return to this page and submit your Transaction ID and bKash number below.',
   ],
-  supportContact: 'support@mathemziedu.com',
+  supportContact: 'support@mathenziedu.com',
   note: 'Please send the payable amount to our bKash number. After payment, submit your bKash Transaction ID from your dashboard or payment section. Our admin team will verify the payment manually. Access will be activated after verification.',
 };

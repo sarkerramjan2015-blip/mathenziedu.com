@@ -341,6 +341,10 @@ service cloud.firestore {
     // Enrollments — users create their own, read their own; admin full access
     match /enrollments/{enrollmentId} {
       allow read: if isSignedIn() && (request.auth.uid == resource.data.userId || isAdmin());
+      // Admins create paid enrollments after a payment has been verified.
+      allow create: if isAdmin()
+        && isValidId(enrollmentId)
+        && isValidEnrollment(incoming());
       allow create: if hasVerifiedEmail()
         && request.auth.uid == incoming().userId
         && emailMatchesAuth(incoming().userEmail)

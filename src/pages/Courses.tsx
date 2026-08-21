@@ -92,7 +92,7 @@ export default function Courses() {
     <>
       <SEO 
         title="Courses"
-        description="Browse Mathemzi Edu's premium mathematics courses — Academic Maths, Olympiad, Admission prep, and more. Find the right course for your level."
+        description="Browse Mathenzi Edu's premium mathematics courses — Academic Maths, Olympiad, Admission prep, and more. Find the right course for your level."
         path="/courses"
       />
       <div className="min-h-screen py-12 relative z-10 w-full overflow-x-hidden">

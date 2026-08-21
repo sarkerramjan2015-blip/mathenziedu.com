@@ -1,57 +1,57 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://mathemziedu.vercel.app/</loc>
+    <loc>https://mathenziedu.com/</loc>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://mathemziedu.vercel.app/courses</loc>
+    <loc>https://mathenziedu.com/courses</loc>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://mathemziedu.vercel.app/exams</loc>
+    <loc>https://mathenziedu.com/exams</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://mathemziedu.vercel.app/books</loc>
+    <loc>https://mathenziedu.com/books</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://mathemziedu.vercel.app/admission</loc>
+    <loc>https://mathenziedu.com/admission</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://mathemziedu.vercel.app/mathematics-and-nature</loc>
+    <loc>https://mathenziedu.com/mathematics-and-nature</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://mathemziedu.vercel.app/articles</loc>
+    <loc>https://mathenziedu.com/articles</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://mathemziedu.vercel.app/about</loc>
+    <loc>https://mathenziedu.com/about</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://mathemziedu.vercel.app/contact</loc>
+    <loc>https://mathenziedu.com/contact</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://mathemziedu.vercel.app/privacy</loc>
+    <loc>https://mathenziedu.com/privacy</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://mathemziedu.vercel.app/terms</loc>
+    <loc>https://mathenziedu.com/terms</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>

@@ -23,7 +23,7 @@ export default function About() {
     <>
       <SEO 
         title="About"
-        description="Learn about Mathemzi Edu — Bangladesh's premium mathematics learning platform. Mission, vision, values, and our commitment to math education."
+        description="Learn about Mathenzi Edu — Bangladesh's premium mathematics learning platform. Mission, vision, values, and our commitment to math education."
         path="/about"
       />
       <div className="min-h-screen py-20 relative z-10 w-full overflow-hidden text-slate-300">

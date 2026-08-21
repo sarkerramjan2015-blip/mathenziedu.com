@@ -1,0 +1,67 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isInitialAdminEmail() {
+      return isSignedIn()
+        && request.auth.token.email == 'sarkerramjan2015@gmail.com'
+        && request.auth.token.email_verified == true;
+    }
+
+    function hasAdminRole() {
+      return isSignedIn()
+        && firestore.get(
+          /databases/(default)/documents/users/$(request.auth.uid)
+        ).data.role == 'admin';
+    }
+
+    function isAdmin() {
+      return isInitialAdminEmail() || hasAdminRole();
+    }
+
+    function isSafeImage(fileName) {
+      return fileName.size() <= 180
+        && fileName.matches('^[a-zA-Z0-9][a-zA-Z0-9._-]*$')
+        && request.resource.size > 0
+        && request.resource.size <= 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp|gif)');
+    }
+
+    match /course-covers/{fileName} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isSafeImage(fileName);
+      allow delete: if isAdmin();
+    }
+
+    match /book-covers/{fileName} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isSafeImage(fileName);
+      allow delete: if isAdmin();
+    }
+
+    match /article-images/{fileName} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isSafeImage(fileName);
+      allow delete: if isAdmin();
+    }
+
+    match /exam-covers/{fileName} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isSafeImage(fileName);
+      allow delete: if isAdmin();
+    }
+
+    match /category-covers/{fileName} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isSafeImage(fileName);
+      allow delete: if isAdmin();
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

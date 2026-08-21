@@ -48,7 +48,7 @@ export const courses: Course[] = [
   {
     id: '1',
     title: 'Standard One-Seven Foundation Mathematics',
-    instructor: 'Mathemzi Edu Mentor',
+    instructor: 'Mathenzi Edu Mentor',
     price: 1200,
     duration: '8 Weeks',
     lessons: 32,
@@ -133,7 +133,7 @@ export const courses: Course[] = [
   {
     id: '4',
     title: 'O Level Mathematics Preparation',
-    instructor: 'Mathemzi Edu Mentor',
+    instructor: 'Mathenzi Edu Mentor',
     price: 2500,
     duration: '10 Weeks',
     lessons: 40,
@@ -406,13 +406,13 @@ export const articles: Article[] = [
     id: 'a1',
     title: 'How to Build a Strong Foundation in Mathematics',
     description: 'A step-by-step guide for students to develop core mathematical skills from an early age.',
-    author: 'Mathemzi Edu Editorial',
+    author: 'Mathenzi Edu Editorial',
     date: 'Oct 12, 2026',
     category: 'Academic Maths',
     mainCategory: 'Academic Maths',
     subCategory: 'Standard One-Seven',
     image: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?q=80&w=1600&auto=format&fit=crop',
-    content: 'Building a strong foundation in mathematics starts early. Young learners need more than memorization — they need to understand the "why" behind each concept.\n\nHere are the key steps to build mathematical confidence from the beginning:\n\n1. Master Number Sense: Understand place value, counting, and basic operations deeply before moving to advanced topics.\n\n2. Practice Daily: Short, focused practice sessions (20-30 minutes) are far more effective than long, irregular study marathons.\n\n3. Real-life Connections: Connect math to everyday situations — shopping, cooking, measuring — to make it meaningful.\n\n4. Learn from Mistakes: Every wrong answer is an opportunity to understand a misconception. Review errors carefully.\n\n5. Use Visual Models: Drawings, diagrams, and physical objects help abstract concepts become concrete.\n\nAt Mathemzi Edu, our foundation courses are designed to help students develop these essential skills through structured, engaging content.',
+    content: 'Building a strong foundation in mathematics starts early. Young learners need more than memorization — they need to understand the "why" behind each concept.\n\nHere are the key steps to build mathematical confidence from the beginning:\n\n1. Master Number Sense: Understand place value, counting, and basic operations deeply before moving to advanced topics.\n\n2. Practice Daily: Short, focused practice sessions (20-30 minutes) are far more effective than long, irregular study marathons.\n\n3. Real-life Connections: Connect math to everyday situations — shopping, cooking, measuring — to make it meaningful.\n\n4. Learn from Mistakes: Every wrong answer is an opportunity to understand a misconception. Review errors carefully.\n\n5. Use Visual Models: Drawings, diagrams, and physical objects help abstract concepts become concrete.\n\nAt Mathenzi Edu, our foundation courses are designed to help students develop these essential skills through structured, engaging content.',
   },
   {
     id: 'a2',
@@ -424,7 +424,7 @@ export const articles: Article[] = [
     mainCategory: 'Academic Maths',
     subCategory: 'SSC Mathematics',
     image: 'https://images.unsplash.com/photo-1509228468518-180dd4864904?q=80&w=1600&auto=format&fit=crop',
-    content: 'Many students know the material but struggle during exams. The issue is not knowledge — it is exam readiness.\n\nPractice exams solve several problems at once:\n\n1. Time Management: Students learn to allocate time across questions and avoid getting stuck on a single problem.\n\n2. Pattern Recognition: After 5-6 mock tests, students begin to recognize question patterns and common trap answers.\n\n3. Anxiety Reduction: Familiarity with exam format reduces nervousness. The exam feels like "just another practice test."\n\n4. Gap Identification: Mock tests reveal exactly which topics need more work, so study time is used efficiently.\n\n5. Confidence Building: Seeing improvement across mock tests builds genuine self-belief.\n\nMathemzi Edu offers MCQ and written practice exams at every level — SSC, HSC, O Level, A Level, Olympiad, and admission tests. Every exam gives instant results, detailed feedback, and progress tracking.',
+    content: 'Many students know the material but struggle during exams. The issue is not knowledge — it is exam readiness.\n\nPractice exams solve several problems at once:\n\n1. Time Management: Students learn to allocate time across questions and avoid getting stuck on a single problem.\n\n2. Pattern Recognition: After 5-6 mock tests, students begin to recognize question patterns and common trap answers.\n\n3. Anxiety Reduction: Familiarity with exam format reduces nervousness. The exam feels like "just another practice test."\n\n4. Gap Identification: Mock tests reveal exactly which topics need more work, so study time is used efficiently.\n\n5. Confidence Building: Seeing improvement across mock tests builds genuine self-belief.\n\nMathenzi Edu offers MCQ and written practice exams at every level — SSC, HSC, O Level, A Level, Olympiad, and admission tests. Every exam gives instant results, detailed feedback, and progress tracking.',
   },
   {
     id: 'a3',
@@ -436,13 +436,13 @@ export const articles: Article[] = [
     mainCategory: 'Olympiad',
     subCategory: 'Secondary Level',
     image: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?q=80&w=1600&auto=format&fit=crop',
-    content: 'The Bangladesh Mathematical Olympiad (BdMO) is the gateway to the International Mathematical Olympiad (IMO). Here is a structured preparation roadmap:\n\nStage 1 — Foundation (3-4 months):\nMaster the four core olympiad areas: Number Theory, Algebra, Geometry, and Combinatorics. Use standard olympiad textbooks and solve beginner problems daily.\n\nStage 2 — Intermediate Problem Solving (3-4 months):\nMove to national-level problems. Learn proof techniques: induction, contradiction, pigeonhole principle, and invariants.\n\nStage 3 — Mock Contests (2-3 months):\nTake full-length timed contests weekly. Review every solution in detail — especially the problems you could not solve.\n\nKey Resources:\n- Bangladesh Math Olympiad past papers\n- Art of Problem Solving (AoPS) materials\n- Geometry Revisited (Coxeter & Greitzer)\n- Mathemzi Edu olympiad courses and mock tests\n\nAt Mathemzi Edu, our olympiad courses are designed by national-level competitors who understand exactly what it takes to succeed at BdMO.',
+    content: 'The Bangladesh Mathematical Olympiad (BdMO) is the gateway to the International Mathematical Olympiad (IMO). Here is a structured preparation roadmap:\n\nStage 1 — Foundation (3-4 months):\nMaster the four core olympiad areas: Number Theory, Algebra, Geometry, and Combinatorics. Use standard olympiad textbooks and solve beginner problems daily.\n\nStage 2 — Intermediate Problem Solving (3-4 months):\nMove to national-level problems. Learn proof techniques: induction, contradiction, pigeonhole principle, and invariants.\n\nStage 3 — Mock Contests (2-3 months):\nTake full-length timed contests weekly. Review every solution in detail — especially the problems you could not solve.\n\nKey Resources:\n- Bangladesh Math Olympiad past papers\n- Art of Problem Solving (AoPS) materials\n- Geometry Revisited (Coxeter & Greitzer)\n- Mathenzi Edu olympiad courses and mock tests\n\nAt Mathenzi Edu, our olympiad courses are designed by national-level competitors who understand exactly what it takes to succeed at BdMO.',
   },
   {
     id: 'a4',
     title: 'Mathematics in Nature: Patterns Around Us',
     description: 'Explore Fibonacci sequences, golden ratios, and fractal geometry in the natural world.',
-    author: 'Mathemzi Edu Editorial',
+    author: 'Mathenzi Edu Editorial',
     date: 'Nov 15, 2026',
     category: 'Mathematics and Nature',
     mainCategory: 'Mathematics and Nature',
@@ -460,7 +460,7 @@ export const articles: Article[] = [
     mainCategory: 'Academic Maths',
     subCategory: 'SSC Mathematics',
     image: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?q=80&w=1600&auto=format&fit=crop',
-    content: 'The SSC Mathematics exam requires both conceptual understanding and exam technique. Here is a proven preparation plan:\n\nMonth 1-2 — Foundation:\nReview all chapters from Class 9-10 textbook. Focus on core concepts: algebra, geometry, trigonometry, and statistics. Complete every example problem in the textbook.\n\nMonth 3-4 — Practice:\nSolve board exam questions from the last 5 years. Time yourself. Learn to write clear, step-by-step solutions — SSC markers award partial credit for method even when the final answer is wrong.\n\nMonth 5 — Model Tests:\nTake full-length model tests under exam conditions. Review every mistake. Keep a "mistake notebook" to track patterns in your errors.\n\nFinal Month — Revision:\nGo through the mistake notebook. Solve the most recent board papers again. Focus on your weakest 3-4 topics.\n\nMathemzi Edu\'s SSC Mathematics Complete Course includes all these elements with structured lessons, topic-wise practice, and full mock tests.',
+    content: 'The SSC Mathematics exam requires both conceptual understanding and exam technique. Here is a proven preparation plan:\n\nMonth 1-2 — Foundation:\nReview all chapters from Class 9-10 textbook. Focus on core concepts: algebra, geometry, trigonometry, and statistics. Complete every example problem in the textbook.\n\nMonth 3-4 — Practice:\nSolve board exam questions from the last 5 years. Time yourself. Learn to write clear, step-by-step solutions — SSC markers award partial credit for method even when the final answer is wrong.\n\nMonth 5 — Model Tests:\nTake full-length model tests under exam conditions. Review every mistake. Keep a "mistake notebook" to track patterns in your errors.\n\nFinal Month — Revision:\nGo through the mistake notebook. Solve the most recent board papers again. Focus on your weakest 3-4 topics.\n\nMathenzi Edu\'s SSC Mathematics Complete Course includes all these elements with structured lessons, topic-wise practice, and full mock tests.',
   },
   {
     id: 'a6',
@@ -472,7 +472,7 @@ export const articles: Article[] = [
     mainCategory: 'Admission Course',
     subCategory: 'Engineering Admission Math',
     image: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?q=80&w=1600&auto=format&fit=crop',
-    content: 'Admission tests in Bangladesh — BUET, KUET, DU, medical colleges — require speed, accuracy, and strategic preparation.\n\nKey Differences from Board Exams:\n1. Speed matters: Most admission tests have 40-60 MCQs in under an hour.\n2. Negative marking: Guessing hurts. You need both knowledge and test strategy.\n3. Shortcut math: You cannot solve every problem the long way. Mental math and shortcuts are essential.\n\nPreparation Strategy:\n- Complete the HSC syllabus thoroughly first (board concepts are the foundation).\n- Practice 100+ MCQs daily during the admission season.\n- Learn shortcut techniques: Vedic math, approximation strategies, elimination methods.\n- Take weekly mock tests under strict time limits.\n- Analyze every wrong answer — understand why the correct option is correct and why each distractor is wrong.\n\nMathemzi Edu\'s Engineering Admission Math Crash Course combines all these elements with focused topic coverage, shortcut training, and full mock tests.',
+    content: 'Admission tests in Bangladesh — BUET, KUET, DU, medical colleges — require speed, accuracy, and strategic preparation.\n\nKey Differences from Board Exams:\n1. Speed matters: Most admission tests have 40-60 MCQs in under an hour.\n2. Negative marking: Guessing hurts. You need both knowledge and test strategy.\n3. Shortcut math: You cannot solve every problem the long way. Mental math and shortcuts are essential.\n\nPreparation Strategy:\n- Complete the HSC syllabus thoroughly first (board concepts are the foundation).\n- Practice 100+ MCQs daily during the admission season.\n- Learn shortcut techniques: Vedic math, approximation strategies, elimination methods.\n- Take weekly mock tests under strict time limits.\n- Analyze every wrong answer — understand why the correct option is correct and why each distractor is wrong.\n\nMathenzi Edu\'s Engineering Admission Math Crash Course combines all these elements with focused topic coverage, shortcut training, and full mock tests.',
   },
 ];
 
@@ -546,7 +546,7 @@ export const books: Book[] = [
   {
     id: 'b6',
     title: 'O Level Mathematics Practice Notes',
-    author: 'Mathemzi Edu Editorial',
+    author: 'Mathenzi Edu Editorial',
     description: 'Topical practice notes for Cambridge O Level Mathematics covering all syllabus components with past paper references.',
     category: 'Academic Books',
     mainCategory: 'Books Corner',
@@ -573,7 +573,7 @@ export const books: Book[] = [
   {
     id: 'b8',
     title: 'Mathematics in Nature Visual Guide',
-    author: 'Mathemzi Edu Editorial',
+    author: 'Mathenzi Edu Editorial',
     description: 'A beautifully illustrated guide to mathematical patterns in nature — Fibonacci, golden ratio, fractals, symmetry, and geometry in the natural world.',
     category: 'PDF Resources',
     mainCategory: 'Books Corner',

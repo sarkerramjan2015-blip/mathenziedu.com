@@ -85,7 +85,7 @@ export default function Books() {
     <>
       <SEO 
         title="Books Corner"
-        description="Browse Mathemzi Edu's Books Corner — academic textbooks, olympiad problem books, admission guides, and practice workbooks for mathematics students."
+        description="Browse Mathenzi Edu's Books Corner — academic textbooks, olympiad problem books, admission guides, and practice workbooks for mathematics students."
         path="/books"
       />
       <div className="min-h-screen py-12 relative z-10 w-full overflow-x-hidden">

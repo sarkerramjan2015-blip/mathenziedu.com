@@ -122,7 +122,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen py-10 relative z-10 w-full">
-      <SEO title="Dashboard" description="Your Mathemzi Edu learning dashboard — track courses, enrollments, and saved articles." path="/dashboard" />
+      <SEO title="Dashboard" description="Your Mathenzi Edu learning dashboard — track courses, enrollments, and saved articles." path="/dashboard" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {user && !user.emailVerified && !isDemo && (
           <div role="status" className="mb-6 rounded-xl border border-[#F59E0B]/30 bg-[#F59E0B]/10 px-5 py-4 text-sm text-amber-100 sm:flex sm:items-center sm:justify-between sm:gap-4">

@@ -92,7 +92,7 @@ export default function Admission() {
     <>
       <SEO 
         title="Admission Courses"
-        description="Prepare for university, engineering, medical, and other admission exams with Mathemzi Edu's expert-led mathematics courses in Bangladesh."
+        description="Prepare for university, engineering, medical, and other admission exams with Mathenzi Edu's expert-led mathematics courses in Bangladesh."
         path="/admission"
       />
       <div className="min-h-screen py-12 relative z-10 w-full overflow-x-hidden">

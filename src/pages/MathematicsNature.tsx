@@ -49,7 +49,7 @@ export default function MathematicsNature() {
     <>
       <SEO 
         title="Mathematics & Nature"
-        description="Discover the hidden mathematical patterns in nature — Fibonacci, Golden Ratio, Symmetry, Fractals, and more with Mathemzi Edu."
+        description="Discover the hidden mathematical patterns in nature — Fibonacci, Golden Ratio, Symmetry, Fractals, and more with Mathenzi Edu."
         path="/mathematics-and-nature"
       />
       <div className="min-h-screen py-12 relative z-10 w-full overflow-x-hidden">

@@ -40,7 +40,7 @@ export default function Exams() {
     <>
       <SEO 
         title="Exams"
-        description="Prepare for mathematics exams with Mathemzi Edu — MCQ and written model tests for olympiad, academic, and admission exams."
+        description="Prepare for mathematics exams with Mathenzi Edu — MCQ and written model tests for olympiad, academic, and admission exams."
         path="/exams"
       />
       <div className="min-h-screen py-12 relative z-10 w-full">

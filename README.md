@@ -1,4 +1,4 @@
-# Mathemzi Edu
+# Mathenzi Edu
 
 **Master Mathematics with Logic, Practice & Confidence**
 
@@ -66,7 +66,7 @@ VITE_DEMO_MODE=true
 ## Project Structure
 
 ```
-mathemziedu/
+mathenziedu/
 ├── public/
 │   ├── robots.txt
 │   ├── sitemap.xml
@@ -136,7 +136,7 @@ mathemziedu/
 ```bash
 # Clone the repository
 git clone <repo-url>
-cd mathemziedu
+cd mathenziedu
 
 # Install dependencies
 npm install

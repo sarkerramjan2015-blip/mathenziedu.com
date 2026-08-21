@@ -28,7 +28,7 @@ export default function ForgotPassword() {
 
   return (
     <>
-      <SEO title="Forgot Password" description="Reset your Mathemzi Edu account password." path="/forgot-password" />
+      <SEO title="Forgot Password" description="Reset your Mathenzi Edu account password." path="/forgot-password" />
       <div className="min-h-[80vh] flex items-center justify-center py-12 px-4 relative z-10 w-full">
         <div className="max-w-md w-full">
           <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-8 sm:p-10 shadow-2xl border border-white/10">
@@ -36,7 +36,7 @@ export default function ForgotPassword() {
               <Link to="/" className="flex items-center gap-2">
                 <BookOpen className="h-8 w-8 text-[#10B981]" />
                 <span className="font-display font-bold text-2xl text-white">
-                  Mathemzi<span className="text-[#10B981]">Edu</span>
+                  Mathenzi<span className="text-[#10B981]">Edu</span>
                 </span>
               </Link>
             </div>

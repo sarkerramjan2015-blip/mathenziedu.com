@@ -25,7 +25,7 @@ function AccessDenied() {
         <ShieldAlert className="mx-auto mb-4 h-12 w-12 text-red-300" />
         <h1 className="mb-3 text-2xl font-bold">Access restricted</h1>
         <p className="text-sm leading-relaxed text-slate-300">
-          This area is reserved for Mathemzi Edu administrators. Please sign in with an approved admin account.
+          This area is reserved for Mathenzi Edu administrators. Please sign in with an approved admin account.
         </p>
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
           <Link to="/dashboard" className="rounded-xl bg-[#2563EB] px-5 py-2.5 text-sm font-bold text-white hover:bg-blue-500">

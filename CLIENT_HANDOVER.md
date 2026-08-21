@@ -1,4 +1,4 @@
-# CLIENT HANDOVER — Mathemzi Edu
+# CLIENT HANDOVER — Mathenzi Edu
 
 **Delivery Date:** July 2026
 **Version:** 1.0 (Client-Ready)
@@ -219,11 +219,11 @@ Then rebuild: `npm run build`
 
 ## 10. Brand Consistency
 
-- **Brand name:** Mathemzi Edu (NOT "Mathenzi" or any other variant)
+- **Brand name:** Mathenzi Edu (NOT "Mathenzi" or any other variant)
 - **Tagline:** "Master Mathematics with Logic, Practice & Confidence"
 - **Bangla:** "গণিত হোক সহজ, যুক্তিতে হোক শক্তিশালী"
-- **Domain:** mathemziedu.com
-- **Email:** support@mathemziedu.com
+- **Domain:** mathenziedu.com
+- **Email:** support@mathenziedu.com
 
 ---
 

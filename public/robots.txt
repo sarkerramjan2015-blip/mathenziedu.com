@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://mathemziedu.vercel.app/sitemap.xml
+Sitemap: https://mathenziedu.com/sitemap.xml

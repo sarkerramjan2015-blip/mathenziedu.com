@@ -40,7 +40,7 @@ export default function Contact() {
     <div className="min-h-screen py-16 sm:py-20 relative z-10 w-full overflow-x-hidden">
       <SEO 
         title="Contact Us"
-        description="Get in touch with Mathemzi Edu. Course guidance, exam registration, mentor support, and partnership inquiries."
+        description="Get in touch with Mathenzi Edu. Course guidance, exam registration, mentor support, and partnership inquiries."
         path="/contact"
       />
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">

@@ -195,7 +195,7 @@ export default function ExamDetails() {
   return (
     <>
       <SEO
-        title={`${exam.title} - Mathemzi Edu`}
+        title={`${exam.title} - Mathenzi Edu`}
         description={`${exam.type} exam: ${exam.duration}, ${exam.totalMarks} marks. ${exam.syllabus}`}
         path={`/exams/${id}`}
       />

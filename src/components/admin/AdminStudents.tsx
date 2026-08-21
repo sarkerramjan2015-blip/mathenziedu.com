@@ -23,7 +23,7 @@ interface StudentRecord {
 }
 
 const demoUsers: StudentRecord[] = [
-  { id: 'demo-admin', userId: 'demo-admin', email: 'admin@mathemzi.demo', displayName: 'Demo Admin', role: 'admin' },
+  { id: 'demo-admin', userId: 'demo-admin', email: 'admin@mathenzi.demo', displayName: 'Demo Admin', role: 'admin' },
   { id: 'demo-student-1', userId: 'demo-student-1', email: 'student1@example.com', displayName: 'Rahim Ahmed', role: 'student' },
   { id: 'demo-student-2', userId: 'demo-student-2', email: 'student2@example.com', displayName: 'Nusrat Jahan', role: 'student' },
 ];

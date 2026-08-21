@@ -32,7 +32,7 @@ export default class AppErrorBoundary extends Component<AppErrorBoundaryProps, A
           <AlertTriangle className="mx-auto mb-4 h-12 w-12 text-red-300" aria-hidden="true" />
           <h1 className="mb-3 text-2xl font-bold">Something went wrong</h1>
           <p className="mb-6 text-sm leading-relaxed text-slate-300">
-            The page could not be displayed. Reload to get the latest version of Mathemzi Edu.
+            The page could not be displayed. Reload to get the latest version of Mathenzi Edu.
           </p>
           <button
             type="button"

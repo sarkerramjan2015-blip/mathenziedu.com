@@ -374,7 +374,7 @@ export default function AdminDashboard() {
               <div className="flex items-center gap-2">
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#2563EB]"><BookOpen className="h-5 w-5" /></span>
                 <div>
-                  <div className="font-extrabold">{site.shortName || 'Mathemzi'}</div>
+                  <div className="font-extrabold">{site.shortName || 'Mathenzi'}</div>
                   <div className="text-[10px] uppercase tracking-widest text-emerald-300">Admin</div>
                 </div>
               </div>

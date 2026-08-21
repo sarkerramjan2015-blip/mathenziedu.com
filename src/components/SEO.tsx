@@ -11,7 +11,7 @@ interface SEOProps {
   keywords?: string;
 }
 
-const BASE_URL = (import.meta.env.VITE_SITE_URL || 'https://mathemziedu.vercel.app').replace(/\/$/, '');
+const BASE_URL = (import.meta.env.VITE_SITE_URL || 'https://mathenziedu.com').replace(/\/$/, '');
 const DEFAULT_OG_IMAGE = `${BASE_URL}/og.png`;
 
 export default function SEO({ 
@@ -23,7 +23,7 @@ export default function SEO({
   keywords,
 }: SEOProps) {
   const site = useSiteSettings();
-  const siteName = site.name || 'Mathemzi Edu';
+  const siteName = site.name || 'Mathenzi Edu';
   const effectiveOgImage = ogImage === DEFAULT_OG_IMAGE && site.seoOgImage ? site.seoOgImage : ogImage;
   const fullTitle = title.includes(siteName) ? title : `${title} | ${siteName}`;
   const url = `${BASE_URL}${path}`;
