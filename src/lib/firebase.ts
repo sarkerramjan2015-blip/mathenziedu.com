@@ -13,16 +13,9 @@ const envConfig: FirebaseOptions = {
 };
 
 const hasCompleteEnvConfig = Object.values(envConfig).every(value => typeof value === 'string' && value.trim() !== '');
-const baseConfig = hasCompleteEnvConfig ? envConfig : firebaseConfig;
-const isProductionAuthHost = typeof window !== 'undefined'
-  && window.location.hostname === 'mathenziedu.com';
-
-// Vercel proxies Firebase's redirect helper under these production domains.
-// Keeping the helper first-party avoids third-party storage blocks in modern browsers.
-const resolvedConfig: FirebaseOptions = {
-  ...baseConfig,
-  authDomain: isProductionAuthHost ? window.location.hostname : baseConfig.authDomain,
-};
+// Use Firebase's registered auth handler. A Vercel domain cannot be used as
+// authDomain unless it has separately been configured as a Firebase custom auth domain.
+const resolvedConfig = hasCompleteEnvConfig ? envConfig : firebaseConfig;
 const firestoreDatabaseId = import.meta.env.VITE_FIRESTORE_DATABASE_ID || firebaseConfig.firestoreDatabaseId;
 
 export const app = initializeApp(resolvedConfig);
